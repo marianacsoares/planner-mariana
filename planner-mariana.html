@@ -1,0 +1,1250 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Planner Mariana">
+<title>Planner · Mariana</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bordeaux: #6B1A2A;
+  --bordeaux-deep: #4A1019;
+  --bordeaux-light: #8B2A3E;
+  --bordeaux-muted: #C4899A;
+  --gold: #C9A55A;
+  --gold-light: #E8D4A0;
+  --bege: #F5EFE4;
+  --bege-dark: #E8DFD0;
+  --bege-mid: #D4C4A8;
+  --warm-white: #FAF7F2;
+  --text-dark: #2A1018;
+  --text-mid: #5C3040;
+  --text-light: #9E7A84;
+  --sage: #7A9E7E;
+  --blush: #E8C4CC;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color: transparent; }
+
+body {
+  font-family: 'Jost', sans-serif;
+  background: var(--bege);
+  color: var(--text-dark);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── SIDEBAR ── */
+.sidebar {
+  position: fixed;
+  left:0; top:0; bottom:0;
+  width: 230px;
+  background: var(--bordeaux-deep);
+  display: flex;
+  flex-direction: column;
+  padding: 36px 0;
+  z-index: 100;
+}
+
+.sidebar-logo {
+  padding: 0 28px 28px;
+  border-bottom: 1px solid rgba(201,165,90,0.25);
+}
+
+.sidebar-logo h1 {
+  font-family: 'Playfair Display', serif;
+  font-size: 20px;
+  color: var(--gold);
+  letter-spacing: 0.5px;
+}
+
+.sidebar-logo p {
+  font-size: 11px;
+  color: var(--bordeaux-muted);
+  margin-top: 3px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+
+.nav-section { padding: 20px 0; flex:1; }
+
+.nav-label {
+  font-size: 9px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--bordeaux-muted);
+  padding: 0 28px;
+  margin-bottom: 6px;
+  opacity: 0.7;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 28px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 13px;
+  color: rgba(245,239,228,0.6);
+  border-left: 3px solid transparent;
+  letter-spacing: 0.3px;
+}
+
+.nav-item:hover { color: var(--gold-light); background: rgba(201,165,90,0.08); }
+.nav-item.active {
+  color: var(--gold);
+  border-left-color: var(--gold);
+  background: rgba(201,165,90,0.1);
+}
+
+.nav-icon { font-size: 15px; opacity: 0.9; }
+
+.date-widget {
+  padding: 24px 28px;
+  border-top: 1px solid rgba(201,165,90,0.2);
+}
+
+.date-widget .day {
+  font-family: 'Playfair Display', serif;
+  font-size: 48px;
+  font-weight: 400;
+  color: var(--gold);
+  line-height: 1;
+}
+
+.date-widget .weekday {
+  font-size: 11px;
+  color: var(--gold);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin-top: 4px;
+  opacity: 0.7;
+}
+
+.date-widget .month-year {
+  font-size: 10px;
+  color: var(--bordeaux-muted);
+  margin-top: 2px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+/* ── MAIN ── */
+.main {
+  margin-left: 230px;
+  min-height: 100vh;
+  padding: 36px 40px;
+}
+
+.page { display:none; }
+.page.active { display:block; animation: fadeIn 0.3s ease; }
+@keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+
+.page-header { margin-bottom: 28px; }
+.page-header h2 {
+  font-family: 'Playfair Display', serif;
+  font-size: 30px;
+  font-weight: 400;
+  color: var(--bordeaux-deep);
+}
+.page-header p { font-size: 13px; color: var(--text-light); margin-top: 4px; }
+
+/* ── GRID ── */
+.grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+.grid-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; }
+
+/* ── CARD ── */
+.card {
+  background: var(--warm-white);
+  border-radius: 18px;
+  padding: 22px;
+  border: 1px solid var(--bege-dark);
+}
+
+.card-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 15px;
+  color: var(--bordeaux);
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ── TASKS ── */
+.task-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  margin-bottom: 7px;
+  background: var(--bege);
+  transition: transform 0.15s;
+}
+.task-item:hover { transform: translateX(2px); }
+
+.task-color { width:4px; height:34px; border-radius:4px; flex-shrink:0; }
+
+.task-check {
+  width:18px; height:18px;
+  border-radius:50%;
+  border:2px solid var(--bege-mid);
+  cursor:pointer; flex-shrink:0;
+  transition:all 0.2s;
+  display:flex; align-items:center; justify-content:center;
+}
+.task-check.done { background:var(--bordeaux); border-color:var(--bordeaux); }
+.task-check.done::after { content:'✓'; color:white; font-size:10px; }
+
+.task-text { flex:1; font-size:13px; color:var(--text-mid); }
+.task-text.done { text-decoration:line-through; color:var(--text-light); }
+
+.task-time {
+  font-size:11px; color:var(--text-light);
+  background:white; padding:2px 8px;
+  border-radius:20px; white-space:nowrap;
+}
+
+/* ── ADD BTN ── */
+.add-btn {
+  width:100%; padding:10px;
+  background: var(--bordeaux);
+  color:white; border:none; border-radius:10px;
+  font-size:13px; cursor:pointer; margin-top:8px;
+  font-family:'Jost',sans-serif;
+  letter-spacing:0.5px;
+  transition:opacity 0.2s;
+}
+.add-btn:hover { opacity:0.85; }
+
+/* ── INPUTS ── */
+input[type="text"], input[type="time"], input[type="number"], input[type="date"], select, textarea {
+  font-family:'Jost',sans-serif; font-size:13px;
+  color:var(--text-dark); background:var(--bege);
+  border:1px solid var(--bege-dark); border-radius:10px;
+  padding:9px 12px; outline:none; width:100%;
+  transition:border-color 0.2s;
+}
+input:focus, select:focus, textarea:focus { border-color:var(--bordeaux); }
+
+/* ── EMOTION ── */
+.emotion-grid { display:flex; gap:8px; flex-wrap:wrap; }
+.emotion-btn {
+  display:flex; flex-direction:column; align-items:center; gap:4px;
+  padding:10px 12px; border-radius:12px;
+  border:2px solid var(--bege-dark); background:var(--bege);
+  cursor:pointer; transition:all 0.2s;
+  font-size:11px; color:var(--text-mid);
+  font-family:'Jost',sans-serif;
+}
+.emotion-btn:hover { border-color:var(--bordeaux); }
+.emotion-btn.active { background:var(--bordeaux); border-color:var(--bordeaux); color:white; }
+.emotion-icon { font-size:20px; }
+
+/* ── GRATITUDE ── */
+.gratitude-box {
+  background: linear-gradient(135deg, #F0E4E8, var(--bege));
+  border-radius:12px; padding:18px;
+  font-family:'Playfair Display',serif;
+  font-size:15px; font-style:italic;
+  color:var(--text-mid); line-height:1.7;
+  min-height:80px; outline:none;
+}
+
+/* ── HABITS ── */
+.habit-item {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:10px 12px; border-radius:10px;
+  background:var(--bege); margin-bottom:8px;
+  gap:10px;
+}
+.habit-name { font-size:13px; color:var(--text-mid); flex:1; }
+.habit-days { display:flex; gap:4px; }
+.habit-day {
+  width:26px; height:26px; border-radius:50%;
+  border:2px solid var(--bege-mid);
+  display:flex; align-items:center; justify-content:center;
+  font-size:9px; color:var(--text-light);
+  cursor:pointer; transition:all 0.2s; font-weight:500;
+}
+.habit-day.done { background:var(--bordeaux); border-color:var(--bordeaux); color:white; }
+
+/* ── FINANCE ── */
+/* ── FINANCE NEW ── */
+.finance-summary { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-bottom:20px; }
+.finance-card { padding:16px; border-radius:14px; text-align:center; }
+.finance-card.fatura { background:var(--blush); }
+.finance-card.restante { background:var(--gold-light); }
+.finance-card.compras { background:#D4E8D4; }
+.finance-card .label { font-size:9px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text-mid); margin-bottom:6px; }
+.finance-card .value { font-family:'Playfair Display',serif; font-size:20px; color:var(--text-dark); }
+
+/* legenda de cores/pessoas */
+.person-legend {
+  display:flex; flex-wrap:wrap; gap:8px; margin-bottom:16px;
+}
+.person-chip {
+  display:flex; align-items:center; gap:6px;
+  padding:4px 12px; border-radius:20px;
+  background:var(--warm-white); border:1px solid var(--bege-dark);
+  font-size:12px; color:var(--text-mid); cursor:pointer;
+  transition:all 0.2s;
+}
+.person-chip:hover { border-color:var(--bordeaux); }
+.person-chip .chip-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+
+/* cartão de compra */
+.compra-item {
+  display:flex; align-items:center; gap:12px;
+  padding:12px; border-radius:12px;
+  background:var(--bege); margin-bottom:8px;
+  transition:transform 0.15s;
+}
+.compra-item:hover { transform:translateX(2px); }
+.compra-color-bar { width:5px; border-radius:4px; align-self:stretch; flex-shrink:0; }
+.compra-info { flex:1; min-width:0; }
+.compra-desc { font-size:13px; color:var(--text-dark); font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.compra-meta { font-size:11px; color:var(--text-light); margin-top:3px; }
+.compra-parcela-badge {
+  font-size:11px; padding:3px 9px;
+  border-radius:20px; background:white;
+  color:var(--text-mid); white-space:nowrap; flex-shrink:0;
+}
+.compra-valor { font-size:14px; font-weight:500; color:var(--bordeaux); flex-shrink:0; }
+.compra-restante { font-size:10px; color:var(--text-light); text-align:right; }
+
+/* seletor de pessoa no modal */
+.color-picker { display:flex; gap:8px; flex-wrap:wrap; margin-top:4px; }
+.color-opt {
+  width:32px; height:32px; border-radius:50%;
+  cursor:pointer; border:3px solid transparent;
+  transition:all 0.2s; position:relative;
+}
+.color-opt.selected { border-color:var(--text-dark); transform:scale(1.15); }
+.color-opt.selected::after { content:'✓'; position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:white; font-size:12px; font-weight:700; }
+
+/* ── METAS ── */
+.meta-item {
+  padding:16px; border-radius:12px;
+  background:var(--bege); margin-bottom:12px;
+}
+.meta-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px; }
+.meta-title { font-size:14px; font-weight:500; color:var(--text-dark); }
+.meta-category {
+  font-size:10px; padding:3px 10px;
+  border-radius:20px; font-weight:500; letter-spacing:0.5px;
+}
+.cat-saude { background:#D4E8D4; color:#3A6A3A; }
+.cat-estudos { background:var(--gold-light); color:#7A5A1A; }
+.cat-financeiro { background:var(--blush); color:var(--bordeaux); }
+.cat-cursos { background:#D4D4E8; color:#3A3A7A; }
+.cat-pessoal { background:var(--bege-dark); color:var(--text-mid); }
+
+.meta-progress-bar { height:6px; background:var(--bege-dark); border-radius:6px; overflow:hidden; margin:8px 0; }
+.meta-progress-fill { height:100%; background:var(--bordeaux); border-radius:6px; transition:width 0.5s; }
+.meta-footer { display:flex; justify-content:space-between; font-size:11px; color:var(--text-light); }
+
+/* ── PLANO DE ESTUDOS ── */
+.plano-curso-card {
+  background: var(--warm-white);
+  border-radius: 18px;
+  border: 1px solid var(--bege-dark);
+  margin-bottom: 16px;
+  overflow: hidden;
+}
+.plano-curso-header {
+  display: flex; align-items: center;
+  justify-content: space-between;
+  padding: 18px 22px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.plano-curso-header:hover { background: var(--bege); }
+.plano-curso-left { display:flex; align-items:center; gap:12px; }
+.plano-curso-color { width:12px; height:12px; border-radius:50%; flex-shrink:0; }
+.plano-curso-nome {
+  font-family: 'Playfair Display', serif;
+  font-size:16px; color:var(--bordeaux);
+}
+.plano-curso-sub { font-size:11px; color:var(--text-light); margin-top:2px; }
+.plano-curso-right { display:flex; align-items:center; gap:10px; }
+.plano-pct-badge {
+  font-size:12px; font-weight:500;
+  background: var(--bordeaux); color:white;
+  padding:3px 10px; border-radius:20px;
+}
+.plano-chevron { font-size:12px; color:var(--text-light); transition:transform 0.2s; }
+.plano-chevron.open { transform:rotate(180deg); }
+
+.plano-mini-bar { height:3px; background:var(--bege-dark); }
+.plano-mini-bar-fill { height:100%; background:var(--bordeaux); transition:width 0.4s; }
+
+.plano-topicos {
+  padding: 0 22px 16px;
+  display: none;
+}
+.plano-topicos.open { display: block; }
+
+.topico-item {
+  display:flex; align-items:center; gap:10px;
+  padding: 9px 10px; border-radius:10px;
+  margin-bottom:6px; background:var(--bege);
+  transition: transform 0.15s;
+}
+.topico-item:hover { transform:translateX(2px); }
+.topico-check {
+  width:18px; height:18px; border-radius:50%;
+  border:2px solid var(--bege-mid);
+  cursor:pointer; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center;
+  transition:all 0.2s;
+}
+.topico-check.done { background:var(--bordeaux); border-color:var(--bordeaux); }
+.topico-check.done::after { content:'✓'; color:white; font-size:10px; }
+.topico-text { flex:1; font-size:13px; color:var(--text-mid); }
+.topico-text.done { text-decoration:line-through; color:var(--text-light); }
+.plano-add-topico {
+  width:100%; padding:8px; margin-top:6px;
+  background:transparent; border:1.5px dashed var(--bege-mid);
+  border-radius:10px; color:var(--text-light);
+  font-size:12px; cursor:pointer;
+  font-family:'Jost',sans-serif;
+  transition:all 0.2s;
+}
+.plano-add-topico:hover { border-color:var(--bordeaux); color:var(--bordeaux); }
+
+/* ── STATUS BADGE ── */
+.status-badge {
+  font-size:10px; padding:3px 10px;
+  border-radius:20px; font-weight:500;
+}
+.status-andamento { background:var(--gold-light); color:#7A5A1A; }
+.status-pausado { background:var(--blush); color:var(--bordeaux); }
+.status-concluido { background:#D4E8D4; color:#3A6A3A; }
+
+/* ── DELETE ── */
+.delete-btn {
+  background:none; border:none; color:var(--text-light);
+  cursor:pointer; font-size:15px; padding:2px 6px;
+  border-radius:6px; transition:all 0.2s;
+}
+.delete-btn:hover { color:var(--bordeaux); background:var(--blush); }
+
+/* ── MODAL ── */
+.modal-overlay {
+  display:none; position:fixed; inset:0;
+  background:rgba(42,16,24,0.5); z-index:1000;
+  align-items:center; justify-content:center;
+}
+.modal-overlay.open { display:flex; }
+.modal {
+  background:var(--warm-white); border-radius:20px;
+  padding:28px; width:380px; max-width:90vw;
+  animation:modalIn 0.25s ease;
+}
+@keyframes modalIn { from{opacity:0;transform:scale(0.95)} to{opacity:1;transform:scale(1)} }
+.modal h3 { font-family:'Playfair Display',serif; font-size:20px; margin-bottom:18px; color:var(--bordeaux-deep); }
+.form-group { margin-bottom:12px; }
+.form-label { font-size:10px; color:var(--text-light); margin-bottom:4px; display:block; letter-spacing:1px; text-transform:uppercase; }
+.modal-actions { display:flex; gap:8px; margin-top:20px; }
+.btn-primary {
+  flex:1; padding:10px; background:var(--bordeaux); color:white;
+  border:none; border-radius:10px; font-family:'Jost',sans-serif;
+  font-size:13px; cursor:pointer; transition:opacity 0.2s;
+}
+.btn-primary:hover { opacity:0.85; }
+.btn-secondary {
+  padding:10px 16px; background:var(--bege); color:var(--text-mid);
+  border:1px solid var(--bege-dark); border-radius:10px;
+  font-family:'Jost',sans-serif; font-size:13px; cursor:pointer;
+}
+
+/* ── QUOTE BANNER ── */
+.quote-banner {
+  background: linear-gradient(135deg, var(--bordeaux-deep), var(--bordeaux));
+  border-radius:14px; padding:20px 24px;
+  margin-bottom:20px;
+  display:flex; align-items:center; gap:16px;
+}
+.quote-text {
+  font-family:'Playfair Display',serif;
+  font-size:15px; font-style:italic;
+  color:var(--gold-light); line-height:1.5; flex:1;
+}
+.quote-icon { font-size:28px; opacity:0.6; }
+
+/* ── RASTREADOR ── */
+.rastreador-card {
+  background: var(--warm-white);
+  border-radius: 18px;
+  border: 1px solid var(--bege-dark);
+  padding: 20px 22px;
+  margin-bottom: 16px;
+}
+
+.rastreador-header {
+  display: flex; align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.rastreador-nome {
+  font-family: 'Playfair Display', serif;
+  font-size: 16px; color: var(--bordeaux);
+}
+
+.rastreador-streak {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--bordeaux);
+  color: white; padding: 4px 12px;
+  border-radius: 20px; font-size: 12px;
+  font-weight: 500;
+}
+
+.rastreador-streak .fire { font-size: 14px; }
+
+.rastreador-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 5px;
+  margin-bottom: 10px;
+}
+
+.rastreador-day-label {
+  text-align: center;
+  font-size: 9px; color: var(--text-light);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  padding-bottom: 4px;
+}
+
+.rastreador-day {
+  aspect-ratio: 1;
+  border-radius: 8px;
+  border: 1.5px solid var(--bege-dark);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; color: var(--text-light);
+  cursor: pointer;
+  transition: all 0.15s;
+  background: var(--bege);
+  position: relative;
+}
+
+.rastreador-day:hover { border-color: var(--bordeaux-muted); }
+.rastreador-day.done { background: var(--bordeaux); border-color: var(--bordeaux); color: white; }
+.rastreador-day.done::after { content: '✓'; font-size: 11px; font-weight: 700; }
+.rastreador-day.done span { display: none; }
+.rastreador-day.future { opacity: 0.35; cursor: default; }
+.rastreador-day.today { border-color: var(--gold); border-width: 2px; }
+
+.rastreador-footer {
+  display: flex; justify-content: space-between;
+  font-size: 11px; color: var(--text-light);
+  margin-top: 8px;
+}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { width:4px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:var(--bege-mid); border-radius:4px; }
+
+/* ── MOBILE ── */
+@media (max-width: 768px) {
+  .sidebar { width:64px; }
+  .sidebar-logo h1, .sidebar-logo p, .nav-item span:not(.nav-icon), .date-widget .month-year, .date-widget .weekday, .nav-label { display:none; }
+  .nav-item { justify-content:center; padding:14px; }
+  .date-widget { padding:16px 10px; text-align:center; }
+  .date-widget .day { font-size:30px; }
+  .main { margin-left:64px; padding:20px 16px; }
+  .grid-2, .grid-3 { grid-template-columns:1fr; }
+  .finance-summary { grid-template-columns:1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <h1>Mariana</h1>
+    <p>Meu Planner</p>
+  </div>
+  <nav class="nav-section">
+    <div class="nav-label">Organização</div>
+    <div class="nav-item active" onclick="showPage('planner',this)">
+      <span class="nav-icon">📋</span><span>Planejamento</span>
+    </div>
+    <div class="nav-item" onclick="showPage('habitos',this)">
+      <span class="nav-icon">🌿</span><span>Hábitos</span>
+    </div>
+    <div class="nav-item" onclick="showPage('rastreador',this)">
+      <span class="nav-icon">📅</span><span>Rastreador</span>
+    </div>
+    <div class="nav-item" onclick="showPage('cursos',this)">
+      <span class="nav-icon">🎓</span><span>Cursos</span>
+    </div>
+    <div class="nav-item" onclick="showPage('financeiro',this)">
+      <span class="nav-icon">💰</span><span>Financeiro</span>
+    </div>
+  </nav>
+  <div class="date-widget">
+    <div class="day" id="sidebarDay"></div>
+    <div class="weekday" id="sidebarWeekday"></div>
+    <div class="month-year" id="sidebarDate"></div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+
+  <!-- PLANEJAMENTO -->
+  <div class="page active" id="page-planner">
+    <div class="page-header">
+      <h2>Planejamento Diário</h2>
+      <p id="fullDate"></p>
+    </div>
+    <div class="quote-banner">
+      <span class="quote-icon">✦</span>
+      <div class="quote-text" id="dailyQuote"></div>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">✦ Minhas Tarefas</div>
+        <div id="taskList"></div>
+        <button class="add-btn" onclick="openModal('task')">+ Adicionar tarefa</button>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:16px;">
+        <div class="card">
+          <div class="card-title">🌸 Emoção do dia</div>
+          <div class="emotion-grid">
+            <button class="emotion-btn" onclick="selectEmotion(this,'Alegria')"><span class="emotion-icon">😄</span>Alegria</button>
+            <button class="emotion-btn" onclick="selectEmotion(this,'Calma')"><span class="emotion-icon">😌</span>Calma</button>
+            <button class="emotion-btn" onclick="selectEmotion(this,'Foco')"><span class="emotion-icon">🎯</span>Foco</button>
+            <button class="emotion-btn" onclick="selectEmotion(this,'Cansaço')"><span class="emotion-icon">😴</span>Cansaço</button>
+            <button class="emotion-btn" onclick="selectEmotion(this,'Ansiedade')"><span class="emotion-icon">😰</span>Ansiedade</button>
+            <button class="emotion-btn" onclick="selectEmotion(this,'Gratidão')"><span class="emotion-icon">🙏</span>Gratidão</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">✍️ Gratidão de hoje</div>
+          <div class="gratitude-box" contenteditable="true" id="gratitudeBox"
+            oninput="saveGratitude()" style="outline:none;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- HÁBITOS -->
+  <div class="page" id="page-habitos">
+    <div class="page-header">
+      <h2>Controle de Hábitos</h2>
+      <p>Sua consistência constrói quem você está se tornando</p>
+    </div>
+    <div class="card">
+      <div id="habitList"></div>
+      <button class="add-btn" onclick="openModal('habit')">+ Adicionar hábito</button>
+    </div>
+  </div>
+
+  <!-- RASTREADOR -->
+  <div class="page" id="page-rastreador">
+    <div class="page-header">
+      <h2>Rastreador de Hábitos</h2>
+      <p id="rastreadorMonth"></p>
+    </div>
+    <div id="rastreadorList"></div>
+    <div class="card" style="margin-top:4px;">
+      <button class="add-btn" style="margin-top:0;" onclick="openModal('rastreador')">+ Adicionar hábito ao rastreador</button>
+    </div>
+  </div>
+
+  <!-- CURSOS / PLANO DE ESTUDOS -->
+  <div class="page" id="page-cursos">
+    <div class="page-header">
+      <h2>Plano de Estudos</h2>
+      <p>Organize seus cursos tópico a tópico</p>
+    </div>
+    <div id="cursoList"></div>
+    <div class="card" style="margin-top:4px;">
+      <button class="add-btn" style="margin-top:0;" onclick="openModal('curso')">+ Adicionar curso</button>
+    </div>
+  </div>
+
+  <!-- FINANCEIRO -->
+  <div class="page" id="page-financeiro">
+    <div class="page-header">
+      <h2>Cartão de Crédito</h2>
+      <p id="financeMonth"></p>
+    </div>
+    <div class="finance-summary">
+      <div class="finance-card fatura">
+        <div class="label">Fatura do mês</div>
+        <div class="value" id="totalFatura">R$ 0</div>
+      </div>
+      <div class="finance-card restante">
+        <div class="label">Total restante</div>
+        <div class="value" id="totalRestante">R$ 0</div>
+      </div>
+      <div class="finance-card compras">
+        <div class="label">Compras</div>
+        <div class="value" id="totalCompras">0</div>
+      </div>
+    </div>
+
+    <!-- Legenda de pessoas -->
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-title">👥 Pessoas — legenda de cores</div>
+      <div class="person-legend" id="personLegend"></div>
+      <button class="add-btn" style="margin-top:4px;" onclick="openModal('pessoa')">+ Adicionar pessoa</button>
+    </div>
+
+    <div class="card">
+      <div class="card-title">💳 Compras do mês</div>
+      <div id="compraList"></div>
+      <button class="add-btn" onclick="openModal('compra')">+ Adicionar compra</button>
+    </div>
+  </div>
+
+</main>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModalOutside(event)">
+  <div class="modal"><div id="modalContent"></div></div>
+</div>
+
+<script>
+// ── DATA ──
+let data = JSON.parse(localStorage.getItem('plannerMariana') || 'null') || {
+  tasks: [
+    {id:1,text:'Estudar para prova de Anatomia',time:'08:00',color:'#6B1A2A',done:false},
+    {id:2,text:'Aula online — curso de inglês',time:'10:30',color:'#C9A55A',done:false},
+    {id:3,text:'Academia / treino',time:'17:00',color:'#7A9E7E',done:false},
+    {id:4,text:'Revisar resumos do dia',time:'20:00',color:'#9B8EA8',done:false},
+  ],
+  habits: [
+    {id:1,name:'Beber 2L de água',days:[1,1,0,1,1,0,1]},
+    {id:2,name:'Exercício físico',days:[1,0,1,0,1,0,0]},
+    {id:3,name:'Leitura (30 min)',days:[0,1,1,0,0,1,1]},
+    {id:4,name:'Sem redes sociais até 9h',days:[1,1,1,0,1,1,0]},
+  ],
+  rastreador: [
+    {id:1,nome:'Beber 2L de água',cor:'#6B1A2A',dias:{}},
+    {id:2,nome:'Estudar 1h por dia',cor:'#C9A55A',dias:{}},
+    {id:3,nome:'Exercício físico',cor:'#7A9E7E',dias:{}},
+    {id:4,nome:'Sem celular até 9h',cor:'#9B8EA8',dias:{}},
+  ],
+  cursos: [
+    {id:1,nome:'Inglês — Fisk',plataforma:'Presencial',cor:'#C9A55A',topicos:[
+      {id:101,texto:'Unit 1 — Greetings',feito:true},
+      {id:102,texto:'Unit 2 — Daily Routine',feito:true},
+      {id:103,texto:'Unit 3 — Present Simple',feito:false},
+      {id:104,texto:'Unit 4 — Going out',feito:false},
+    ]},
+    {id:2,nome:'Photoshop para iniciantes',plataforma:'Hotmart',cor:'#7A9E7E',topicos:[
+      {id:201,texto:'Aula 1 — Interface e ferramentas',feito:true},
+      {id:202,texto:'Aula 2 — Camadas',feito:false},
+      {id:203,texto:'Aula 3 — Seleções e máscaras',feito:false},
+    ]},
+  ],
+  pessoas: [
+    {id:1,nome:'Mariana',cor:'#6B1A2A'},
+    {id:2,nome:'Mãe',cor:'#C9A55A'},
+    {id:3,nome:'Pai',cor:'#7A9E7E'},
+  ],
+  compras: [
+    {id:1,desc:'Tênis Nike',valor:189.90,parcelas:6,parcelaAtual:2,pessoaId:1},
+    {id:2,desc:'Livros de faculdade',valor:240.00,parcelas:3,parcelaAtual:1,pessoaId:1},
+    {id:3,desc:'Jantar restaurante',valor:95.00,parcelas:1,parcelaAtual:1,pessoaId:2},
+  ],
+  emotion: null,
+  gratitude: ''
+};
+
+const quotes = [
+  'Disciplina é escolher entre o que você quer agora e o que você mais quer.',
+  'Pequenos progressos diários levam a grandes resultados.',
+  'Sua única competição é quem você era ontem.',
+  'O sucesso é a soma de pequenos esforços repetidos dia após dia.',
+  'Acredite no processo — os resultados chegam para quem persiste.',
+  'Você é capaz de muito mais do que imagina.',
+  'Cada dia é uma nova chance de ser melhor.',
+];
+
+function save() { localStorage.setItem('plannerMariana', JSON.stringify(data)); }
+
+// ── DATE ──
+function initDate() {
+  const now = new Date();
+  const weekdays = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+  const months = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+  document.getElementById('sidebarDay').textContent = now.getDate();
+  document.getElementById('sidebarWeekday').textContent = weekdays[now.getDay()];
+  document.getElementById('sidebarDate').textContent = months[now.getMonth()].toUpperCase() + ' ' + now.getFullYear();
+  document.getElementById('fullDate').textContent = weekdays[now.getDay()] + ', ' + now.getDate() + ' de ' + months[now.getMonth()] + ' de ' + now.getFullYear();
+  document.getElementById('financeMonth').textContent = months[now.getMonth()].charAt(0).toUpperCase() + months[now.getMonth()].slice(1) + ' · ' + now.getFullYear();
+  document.getElementById('dailyQuote').textContent = quotes[now.getDate() % quotes.length];
+}
+
+// ── NAV ──
+function showPage(id, el) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  el.classList.add('active');
+}
+
+// ── TASKS ──
+function renderTasks() {
+  const list = document.getElementById('taskList');
+  list.innerHTML = '';
+  data.tasks.forEach(t => {
+    list.innerHTML += `
+      <div class="task-item">
+        <div class="task-color" style="background:${t.color}"></div>
+        <div class="task-check ${t.done?'done':''}" onclick="toggleTask(${t.id})"></div>
+        <div class="task-text ${t.done?'done':''}">${t.text}</div>
+        <div class="task-time">${t.time}</div>
+        <button class="delete-btn" onclick="deleteTask(${t.id})">×</button>
+      </div>`;
+  });
+}
+function toggleTask(id) {
+  const t = data.tasks.find(x=>x.id===id);
+  if(t){t.done=!t.done;save();renderTasks();}
+}
+function deleteTask(id) {
+  data.tasks=data.tasks.filter(x=>x.id!==id);save();renderTasks();
+}
+
+// ── HABITS ──
+const dayLabels=['D','S','T','Q','Q','S','S'];
+function renderHabits() {
+  const list = document.getElementById('habitList');
+  list.innerHTML = '';
+  data.habits.forEach(h => {
+    const daysHtml = h.days.map((d,i)=>
+      `<div class="habit-day ${d?'done':''}" onclick="toggleHabit(${h.id},${i})">${dayLabels[i]}</div>`
+    ).join('');
+    list.innerHTML += `
+      <div class="habit-item">
+        <span class="habit-name">${h.name}</span>
+        <div class="habit-days">${daysHtml}</div>
+        <button class="delete-btn" onclick="deleteHabit(${h.id})">×</button>
+      </div>`;
+  });
+}
+function toggleHabit(id,idx) {
+  const h=data.habits.find(x=>x.id===id);
+  if(h){h.days[idx]=h.days[idx]?0:1;save();renderHabits();}
+}
+function deleteHabit(id){data.habits=data.habits.filter(x=>x.id!==id);save();renderHabits();}
+
+// ── RASTREADOR ──
+function initRastreador(){
+  const now = new Date();
+  const months = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+  document.getElementById('rastreadorMonth').textContent = months[now.getMonth()] + ' de ' + now.getFullYear();
+}
+
+function calcStreak(dias){
+  const now = new Date();
+  let streak = 0;
+  for(let i = 0; i < 60; i++){
+    const d = new Date(now);
+    d.setDate(now.getDate() - i);
+    const key = d.toISOString().slice(0,10);
+    if(dias[key]) streak++;
+    else break;
+  }
+  return streak;
+}
+
+function renderRastreador(){
+  initRastreador();
+  const container = document.getElementById('rastreadorList');
+  container.innerHTML = '';
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth();
+  const daysInMonth = new Date(year, month+1, 0).getDate();
+  const firstDay = new Date(year, month, 1).getDay();
+  const todayNum = now.getDate();
+  const dayLabelsR = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+
+  data.rastreador.forEach(h => {
+    const streak = calcStreak(h.dias);
+    const totalDone = Object.values(h.dias).filter(Boolean).length;
+
+    // header labels
+    let labelsHtml = dayLabelsR.map(l=>`<div class="rastreador-day-label">${l}</div>`).join('');
+
+    // empty cells before first day
+    let daysHtml = '';
+    for(let e=0;e<firstDay;e++) daysHtml += `<div></div>`;
+
+    // day cells
+    for(let d=1; d<=daysInMonth; d++){
+      const dateKey = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      const done = h.dias[dateKey] || false;
+      const isToday = d === todayNum;
+      const isFuture = d > todayNum;
+      let cls = 'rastreador-day';
+      if(done) cls += ' done';
+      if(isToday) cls += ' today';
+      if(isFuture) cls += ' future';
+      const click = isFuture ? '' : `onclick="toggleRastreador(${h.id},'${dateKey}')"`;
+      daysHtml += `<div class="${cls}" ${click}><span>${d}</span></div>`;
+    }
+
+    container.innerHTML += `
+      <div class="rastreador-card">
+        <div class="rastreador-header">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div style="width:12px;height:12px;border-radius:50%;background:${h.cor};flex-shrink:0;"></div>
+            <div class="rastreador-nome">${h.nome}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div class="rastreador-streak"><span class="fire">🔥</span>${streak} dias</div>
+            <button class="delete-btn" onclick="deleteRastreador(${h.id})">×</button>
+          </div>
+        </div>
+        <div class="rastreador-grid">${labelsHtml}${daysHtml}</div>
+        <div class="rastreador-footer">
+          <span>✦ ${totalDone} dias concluídos este mês</span>
+          <span>${daysInMonth - todayNum} dias restantes</span>
+        </div>
+      </div>`;
+  });
+}
+
+function toggleRastreador(id, dateKey){
+  const h = data.rastreador.find(x=>x.id===id);
+  if(!h) return;
+  h.dias[dateKey] = !h.dias[dateKey];
+  save(); renderRastreador();
+}
+function deleteRastreador(id){
+  data.rastreador = data.rastreador.filter(x=>x.id!==id);
+  save(); renderRastreador();
+}
+
+// ── PLANO DE ESTUDOS ──
+function calcPct(topicos){
+  if(!topicos.length) return 0;
+  return Math.round(topicos.filter(t=>t.feito).length / topicos.length * 100);
+}
+
+function renderCursos(){
+  const list = document.getElementById('cursoList');
+  list.innerHTML = '';
+  data.cursos.forEach(c => {
+    const pct = calcPct(c.topicos);
+    const topicosHtml = c.topicos.map(t=>`
+      <div class="topico-item">
+        <div class="topico-check ${t.feito?'done':''}" onclick="toggleTopico(${c.id},${t.id})"></div>
+        <div class="topico-text ${t.feito?'done':''}">${t.texto}</div>
+        <button class="delete-btn" onclick="deleteTopico(${c.id},${t.id})">×</button>
+      </div>`).join('');
+
+    list.innerHTML += `
+      <div class="plano-curso-card">
+        <div class="plano-curso-header" onclick="toggleCursoOpen(${c.id},this)">
+          <div class="plano-curso-left">
+            <div class="plano-curso-color" style="background:${c.cor}"></div>
+            <div>
+              <div class="plano-curso-nome">${c.nome}</div>
+              <div class="plano-curso-sub">${c.plataforma} · ${c.topicos.length} tópicos</div>
+            </div>
+          </div>
+          <div class="plano-curso-right">
+            <div class="plano-pct-badge">${pct}%</div>
+            <button class="delete-btn" onclick="event.stopPropagation();deleteCurso(${c.id})">×</button>
+            <span class="plano-chevron">▼</span>
+          </div>
+        </div>
+        <div class="plano-mini-bar">
+          <div class="plano-mini-bar-fill" style="width:${pct}%"></div>
+        </div>
+        <div class="plano-topicos" id="topicos-${c.id}">
+          <div style="height:10px;"></div>
+          ${topicosHtml}
+          <button class="plano-add-topico" onclick="promptTopico(${c.id})">+ Adicionar tópico</button>
+        </div>
+      </div>`;
+  });
+}
+
+function toggleCursoOpen(id, headerEl){
+  const topicos = document.getElementById('topicos-'+id);
+  const chevron = headerEl.querySelector('.plano-chevron');
+  topicos.classList.toggle('open');
+  chevron.classList.toggle('open');
+}
+
+function toggleTopico(cursoId, topicoId){
+  const c = data.cursos.find(x=>x.id===cursoId);
+  if(!c) return;
+  const t = c.topicos.find(x=>x.id===topicoId);
+  if(t){ t.feito=!t.feito; save(); renderCursos(); }
+}
+
+function deleteTopico(cursoId, topicoId){
+  const c = data.cursos.find(x=>x.id===cursoId);
+  if(!c) return;
+  c.topicos = c.topicos.filter(x=>x.id!==topicoId);
+  save(); renderCursos();
+}
+
+function promptTopico(cursoId){
+  const texto = prompt('Nome do tópico / aula:');
+  if(!texto || !texto.trim()) return;
+  const c = data.cursos.find(x=>x.id===cursoId);
+  if(!c) return;
+  c.topicos.push({id:nextId++, texto:texto.trim(), feito:false});
+  save(); renderCursos();
+  // reopen the accordion
+  setTimeout(()=>{
+    const el = document.getElementById('topicos-'+cursoId);
+    const header = el.previousElementSibling.previousElementSibling;
+    if(el && !el.classList.contains('open')){
+      el.classList.add('open');
+      const chevron = el.closest('.plano-curso-card').querySelector('.plano-chevron');
+      if(chevron) chevron.classList.add('open');
+    }
+  }, 50);
+}
+
+function deleteCurso(id){
+  data.cursos=data.cursos.filter(x=>x.id!==id);
+  save(); renderCursos();
+}
+function updateCurso(){}
+
+// ── FINANCE ──
+const PERSON_COLORS = ['#6B1A2A','#C9A55A','#7A9E7E','#9B8EA8','#7E9EA8','#C4899A','#8A7A5A','#4A7A8A'];
+let selectedPersonColor = PERSON_COLORS[0];
+let selectedCompraPersonId = null;
+
+function fmt(v){ return 'R$ '+v.toLocaleString('pt-BR',{minimumFractionDigits:2}); }
+
+function renderPersonLegend(){
+  const el=document.getElementById('personLegend');
+  el.innerHTML='';
+  data.pessoas.forEach(p=>{
+    el.innerHTML+=`
+      <div class="person-chip">
+        <div class="chip-dot" style="background:${p.cor}"></div>
+        <span>${p.nome}</span>
+        <button class="delete-btn" style="margin-left:2px;font-size:12px;" onclick="deletePessoa(${p.id})">×</button>
+      </div>`;
+  });
+}
+
+function renderFinance(){
+  renderPersonLegend();
+  const el=document.getElementById('compraList');
+  el.innerHTML='';
+  let totalFatura=0, totalRestante=0;
+
+  data.compras.forEach(c=>{
+    const parcelasRestantes = c.parcelas - c.parcelaAtual + 1;
+    const valorParcela = c.valor / c.parcelas;
+    const restante = valorParcela * parcelasRestantes;
+    totalFatura += valorParcela;
+    totalRestante += restante;
+
+    const pessoa = data.pessoas.find(p=>p.id===c.pessoaId);
+    const cor = pessoa ? pessoa.cor : '#999';
+    const nomePessoa = pessoa ? pessoa.nome : '?';
+
+    el.innerHTML+=`
+      <div class="compra-item">
+        <div class="compra-color-bar" style="background:${cor}"></div>
+        <div class="compra-info">
+          <div class="compra-desc">${c.desc}</div>
+          <div class="compra-meta">👤 ${nomePessoa}</div>
+        </div>
+        <div style="text-align:right;flex-shrink:0;">
+          <div class="compra-parcela-badge">${c.parcelaAtual}/${c.parcelas}x</div>
+          <div class="compra-valor" style="margin-top:4px;">${fmt(valorParcela)}</div>
+          <div class="compra-restante">Restante: ${fmt(restante)}</div>
+        </div>
+        <button class="delete-btn" onclick="deleteCompra(${c.id})">×</button>
+      </div>`;
+  });
+
+  document.getElementById('totalFatura').textContent=fmt(totalFatura);
+  document.getElementById('totalRestante').textContent=fmt(totalRestante);
+  document.getElementById('totalCompras').textContent=data.compras.length;
+}
+
+function deleteCompra(id){data.compras=data.compras.filter(x=>x.id!==id);save();renderFinance();}
+function deletePessoa(id){data.pessoas=data.pessoas.filter(x=>x.id!==id);save();renderFinance();}
+
+// ── EMOTION ──
+function selectEmotion(btn,name){
+  document.querySelectorAll('.emotion-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  data.emotion=name;save();
+}
+
+// ── GRATITUDE ──
+function saveGratitude(){data.gratitude=document.getElementById('gratitudeBox').innerText;save();}
+
+// ── MODAL ──
+let nextId=200;
+function openModal(type){
+  const overlay=document.getElementById('modalOverlay');
+  const content=document.getElementById('modalContent');
+  const forms={
+    task:`<h3>Nova Tarefa</h3>
+      <div class="form-group"><label class="form-label">Descrição</label><input type="text" id="m_taskText" placeholder="Ex: Estudar Anatomia..."></div>
+      <div class="form-group"><label class="form-label">Horário</label><input type="time" id="m_taskTime" value="09:00"></div>
+      <div class="form-group"><label class="form-label">Cor</label>
+        <select id="m_taskColor">
+          <option value="#6B1A2A">Bordeaux</option>
+          <option value="#C9A55A">Dourado</option>
+          <option value="#7A9E7E">Verde sage</option>
+          <option value="#9B8EA8">Lilás</option>
+          <option value="#7E9EA8">Azul acinzentado</option>
+        </select></div>
+      <div class="modal-actions"><button class="btn-secondary" onclick="closeModal()">Cancelar</button><button class="btn-primary" onclick="addTask()">Adicionar</button></div>`,
+
+    habit:`<h3>Novo Hábito</h3>
+      <div class="form-group"><label class="form-label">Nome do hábito</label><input type="text" id="m_habitName" placeholder="Ex: Beber água..."></div>
+      <div class="modal-actions"><button class="btn-secondary" onclick="closeModal()">Cancelar</button><button class="btn-primary" onclick="addHabit()">Adicionar</button></div>`,
+
+    rastreador:`<h3>Novo Hábito</h3>
+      <div class="form-group"><label class="form-label">Nome do hábito</label><input type="text" id="m_rastNome" placeholder="Ex: Meditar 10 min..."></div>
+      <div class="form-group"><label class="form-label">Cor identificadora</label>
+        <div class="color-picker" id="colorPickerRast">
+          ${PERSON_COLORS.map((c,i)=>`<div class="color-opt ${i===0?'selected':''}" style="background:${c}" onclick="selectColorRast(this,'${c}')"></div>`).join('')}
+        </div>
+      </div>
+      <div class="modal-actions"><button class="btn-secondary" onclick="closeModal()">Cancelar</button><button class="btn-primary" onclick="addRastreador()">Adicionar</button></div>`,
+
+    meta:``,
+
+    curso:`<h3>Novo Curso</h3>
+      <div class="form-group"><label class="form-label">Nome do curso</label><input type="text" id="m_cursoNome" placeholder="Ex: Inglês, Canva..."></div>
+      <div class="form-group"><label class="form-label">Plataforma / local</label><input type="text" id="m_cursoPlat" placeholder="Ex: Udemy, Presencial..."></div>
+      <div class="form-group"><label class="form-label">Cor identificadora</label>
+        <div class="color-picker" id="colorPickerCurso">
+          ${PERSON_COLORS.map((c,i)=>`<div class="color-opt ${i===0?'selected':''}" style="background:${c}" onclick="selectColorCurso(this,'${c}')"></div>`).join('')}
+        </div>
+      </div>
+      <div class="modal-actions"><button class="btn-secondary" onclick="closeModal()">Cancelar</button><button class="btn-primary" onclick="addCurso()">Adicionar</button></div>`,
+
+    pessoa:`<h3>Nova Pessoa</h3>
+      <div class="form-group"><label class="form-label">Nome</label><input type="text" id="m_pessoaNome" placeholder="Ex: Mamãe, João..."></div>
+      <div class="form-group"><label class="form-label">Cor identificadora</label>
+        <div class="color-picker" id="colorPicker">
+          ${PERSON_COLORS.map((c,i)=>`<div class="color-opt ${i===0?'selected':''}" style="background:${c}" onclick="selectColor(this,'${c}')"></div>`).join('')}
+        </div>
+      </div>
+      <div class="modal-actions"><button class="btn-secondary" onclick="closeModal()">Cancelar</button><button class="btn-primary" onclick="addPessoa()">Adicionar</button></div>`,
+
+    compra:`<h3>Nova Compra</h3>
+      <div class="form-group"><label class="form-label">Descrição</label><input type="text" id="m_compraDesc" placeholder="Ex: Tênis, Livro..."></div>
+      <div class="form-group"><label class="form-label">Valor total (R$)</label><input type="number" id="m_compraValor" placeholder="0,00" min="0" step="0.01"></div>
+      <div class="form-group"><label class="form-label">Total de parcelas</label><input type="number" id="m_compraParcelas" placeholder="Ex: 6" min="1" max="48" value="1"></div>
+      <div class="form-group"><label class="form-label">Parcela atual</label><input type="number" id="m_compraParcelaAtual" placeholder="Ex: 1" min="1" max="48" value="1"></div>
+      <div class="form-group"><label class="form-label">Quem comprou</label>
+        <select id="m_compraPessoa">
+          ${data.pessoas.map(p=>`<option value="${p.id}">${p.nome}</option>`).join('')}
+        </select>
+      </div>
+      <div class="modal-actions"><button class="btn-secondary" onclick="closeModal()">Cancelar</button><button class="btn-primary" onclick="addCompra()">Adicionar</button></div>`,
+
+    income:``, expense:``
+  };
+  content.innerHTML=forms[type]||'';
+  overlay.classList.add('open');
+}
+function closeModal(){document.getElementById('modalOverlay').classList.remove('open');}
+function closeModalOutside(e){if(e.target===document.getElementById('modalOverlay'))closeModal();}
+
+function addTask(){
+  const text=document.getElementById('m_taskText').value.trim();
+  const time=document.getElementById('m_taskTime').value;
+  const color=document.getElementById('m_taskColor').value;
+  if(!text)return;
+  data.tasks.push({id:nextId++,text,time,color,done:false});
+  save();renderTasks();closeModal();
+}
+function addHabit(){
+  const name=document.getElementById('m_habitName').value.trim();
+  if(!name)return;
+  data.habits.push({id:nextId++,name,days:[0,0,0,0,0,0,0]});
+  save();renderHabits();closeModal();
+}
+let selectedRastColor = PERSON_COLORS[0];
+function selectColorRast(el,cor){
+  document.querySelectorAll('#colorPickerRast .color-opt').forEach(o=>o.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedRastColor=cor;
+}
+function addRastreador(){
+  const nome=document.getElementById('m_rastNome').value.trim();
+  if(!nome)return;
+  data.rastreador.push({id:nextId++,nome,cor:selectedRastColor,dias:{}});
+  save();renderRastreador();closeModal();
+}
+function addMeta(){}
+let selectedCursoColor = PERSON_COLORS[0];
+function selectColorCurso(el,cor){
+  document.querySelectorAll('#colorPickerCurso .color-opt').forEach(o=>o.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedCursoColor=cor;
+}
+function addCurso(){
+  const nome=document.getElementById('m_cursoNome').value.trim();
+  const plataforma=document.getElementById('m_cursoPlat').value.trim()||'Online';
+  if(!nome)return;
+  data.cursos.push({id:nextId++,nome,plataforma,cor:selectedCursoColor,topicos:[]});
+  save();renderCursos();closeModal();
+}
+function selectColor(el,cor){
+  document.querySelectorAll('.color-opt').forEach(o=>o.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedPersonColor=cor;
+}
+function addPessoa(){
+  const nome=document.getElementById('m_pessoaNome').value.trim();
+  if(!nome)return;
+  data.pessoas.push({id:nextId++,nome,cor:selectedPersonColor});
+  save();renderFinance();closeModal();
+}
+function addCompra(){
+  const desc=document.getElementById('m_compraDesc').value.trim();
+  const valor=parseFloat(document.getElementById('m_compraValor').value)||0;
+  const parcelas=parseInt(document.getElementById('m_compraParcelas').value)||1;
+  const parcelaAtual=parseInt(document.getElementById('m_compraParcelaAtual').value)||1;
+  const pessoaId=parseInt(document.getElementById('m_compraPessoa').value);
+  if(!desc||!valor)return;
+  data.compras.push({id:nextId++,desc,valor,parcelas,parcelaAtual,pessoaId});
+  save();renderFinance();closeModal();
+}
+function addTransaction(){}
+
+// ── INIT ──
+initDate();
+renderTasks();
+renderHabits();
+renderRastreador();
+renderCursos();
+renderFinance();
+if(data.emotion){
+  document.querySelectorAll('.emotion-btn').forEach(b=>{
+    if(b.textContent.trim().includes(data.emotion))b.classList.add('active');
+  });
+}
+if(data.gratitude) document.getElementById('gratitudeBox').innerText=data.gratitude;
+</script>
+</body>
+</html>
