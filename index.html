@@ -10,7 +10,6 @@
 <!-- React -->
 <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
 <!-- Firebase (compat, simples de usar sem build tools) -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -37,8 +36,14 @@
 <body>
 <div id="root"></div>
 
-<script type="text/babel" data-presets="react">
-const { useState, useEffect, useCallback, useMemo } = React;
+<script>
+import { jsxDEV as _jsxDEV } from "react/jsx-dev-runtime";
+const {
+  useState,
+  useEffect,
+  useCallback,
+  useMemo
+} = React;
 
 // ---------- Firebase ----------
 const firebaseConfig = {
@@ -54,67 +59,243 @@ const db = firebase.firestore();
 const docRef = db.collection("modocaverna").doc("data");
 
 // ---------- Helpers ----------
-const pad = (n) => String(n).padStart(2, "0");
-const toKey = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const pad = n => String(n).padStart(2, "0");
+const toKey = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 const todayKey = () => toKey(new Date());
-const monthLabel = (y, m) =>
-  new Date(y, m, 1).toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
-const dowIndex = (d) => d.getDay();
-
+const monthLabel = (y, m) => new Date(y, m, 1).toLocaleDateString("pt-BR", {
+  month: "long",
+  year: "numeric"
+});
+const dowIndex = d => d.getDay();
 const DEFAULT_START = "2026-06-23";
-
 function dayOfChallenge(startKey) {
   const start = new Date(startKey + "T00:00:00");
   const now = new Date();
   const diff = Math.floor((now - start) / 86400000) + 1;
   return Math.max(1, diff);
 }
-
 function phaseForDay(day) {
-  if (day <= 30) return { n: 1, name: "Fundação", range: "Dias 1–30", goal: "Consistência acima de intensidade." };
-  if (day <= 60) return { n: 2, name: "Consolidação", range: "Dias 31–60", goal: "Continuar mesmo sem motivação." };
-  return { n: 3, name: "Autonomia", range: "Dias 61–90", goal: "Tornar a rotina sustentável após os 90 dias." };
+  if (day <= 30) return {
+    n: 1,
+    name: "Fundação",
+    range: "Dias 1–30",
+    goal: "Consistência acima de intensidade."
+  };
+  if (day <= 60) return {
+    n: 2,
+    name: "Consolidação",
+    range: "Dias 31–60",
+    goal: "Continuar mesmo sem motivação."
+  };
+  return {
+    n: 3,
+    name: "Autonomia",
+    range: "Dias 61–90",
+    goal: "Tornar a rotina sustentável após os 90 dias."
+  };
 }
-
-const CATALOG = [
-  { id: "treino_ele", name: "Treinar", icon: "🏋️", owner: "Ele", freq: "6x/semana", color: "#e8743a" },
-  { id: "cardio_ele", name: "Cardio (domingo)", icon: "🏋️", owner: "Ele", freq: "domingo", color: "#e8743a", domOnly: true },
-  { id: "alimentacao_ele", name: "Evitar frituras/doces/ultraprocessados", icon: "🌱", owner: "Ele", freq: "dias úteis", color: "#7fa86b" },
-  { id: "agua_ele", name: "Beber 3L de água", icon: "💧", owner: "Ele", freq: "diário", color: "#5b9bd5" },
-  { id: "trabalho_ele", name: "Trabalhar com foco, sem distrações", icon: "💼", owner: "Ele", freq: "diário", color: "#b388d6" },
-  { id: "devocional_ele", name: "Devocional", icon: "🔥", owner: "Ele", freq: "diário", color: "#e8b14a" },
-  { id: "espiritual_ele", name: "Atividade espiritual (semanal)", icon: "🔥", owner: "Ele", freq: "1x/semana", color: "#e8b14a" },
-
-  { id: "treino_ela", name: "Treinar (ou alongar, se não der)", icon: "🏋️", owner: "Ela", freq: "diário", color: "#e8743a" },
-  { id: "agua_ela", name: "Beber de 2,5L a 3L de água", icon: "💧", owner: "Ela", freq: "diário", color: "#5b9bd5" },
-  { id: "alimentacao_ela", name: "Comer bem na maior parte do dia", icon: "🌱", owner: "Ela", freq: "diário", color: "#7fa86b" },
-  { id: "doces_ela", name: "Reduzir doces e gorduras", icon: "🌱", owner: "Ela", freq: "diário (cortar quase total a partir do dia 60)", color: "#7fa86b" },
-  { id: "sono_ela", name: "Dormir antes das 23h", icon: "🔥", owner: "Ela", freq: "dias de semana", color: "#b388d6" },
-  { id: "acordar_ela", name: "Acordar entre 5h30 e 8h", icon: "🔥", owner: "Ela", freq: "diário", color: "#b388d6" },
-  { id: "estudo_fisio_ela", name: "Estudar Fisioterapia (30 min)", icon: "📖", owner: "Ela", freq: "diário", color: "#5b9bd5" },
-  { id: "estudo_curso_ela", name: "Estudar o curso atual (30 min)", icon: "📖", owner: "Ela", freq: "diário", color: "#5b9bd5" },
-  { id: "estudo_aleatorio_ela", name: "Estudar um tema aleatório (30 min)", icon: "📖", owner: "Ela", freq: "diário", color: "#5b9bd5" },
-  { id: "leitura_ela", name: "Ler (1h)", icon: "📖", owner: "Ela", freq: "diário", color: "#5b9bd5" },
-  { id: "devocional_ela", name: "Devocional", icon: "🔥", owner: "Ela", freq: "diário", color: "#e8b14a" },
-  { id: "naoreclamar_ela", name: "Tentar não reclamar", icon: "🔥", owner: "Ela", freq: "diário", color: "#e8b14a" },
-  { id: "espiritual_ela", name: "Adoração ou centro espírita", icon: "🔥", owner: "Ela", freq: "1x/semana", color: "#e8b14a" },
-  { id: "planejar_dia_ela", name: "Planejar o dia seguinte antes de dormir", icon: "💼", owner: "Ela", freq: "diário", color: "#d6a85a" },
-  { id: "organizar_quarto_ela", name: "Organizar o quarto (manutenção rápida)", icon: "💼", owner: "Ela", freq: "diário", color: "#d6a85a" },
-];
-
-const RECURRING_GOALS = [
-  { id: "rg_planejar_semana", name: "Planejar a semana", period: "weekly", owner: "Ela" },
-  { id: "rg_financas", name: "Organizar as finanças", period: "weekly", owner: "Ela" },
-  { id: "rg_autocuidado", name: "Autocuidado", period: "biweekly", owner: "Ela" },
-  { id: "rg_faxina", name: "Faxina geral do quarto", period: "biweekly", owner: "Ela" },
-  { id: "rg_rever_metas", name: "Rever metas", period: "monthly", owner: "Ela" },
-  { id: "rg_item_pessoal", name: "Comprar 1 item pessoal", period: "monthly", owner: "Ela" },
-  { id: "rg_marmita_ela", name: "Fazer as marmitas (domingo ou segunda)", period: "weekly", owner: "Ela" },
-  { id: "rg_marmita_ele", name: "Fazer as marmitas (domingo ou segunda)", period: "weekly", owner: "Ele" },
-];
-
-const PERIOD_LABEL = { weekly: "Semanal", biweekly: "Quinzenal", monthly: "Mensal" };
-
+const CATALOG = [{
+  id: "treino_ele",
+  name: "Treinar",
+  icon: "🏋️",
+  owner: "Ele",
+  freq: "6x/semana",
+  color: "#e8743a"
+}, {
+  id: "cardio_ele",
+  name: "Cardio (domingo)",
+  icon: "🏋️",
+  owner: "Ele",
+  freq: "domingo",
+  color: "#e8743a",
+  domOnly: true
+}, {
+  id: "alimentacao_ele",
+  name: "Evitar frituras/doces/ultraprocessados",
+  icon: "🌱",
+  owner: "Ele",
+  freq: "dias úteis",
+  color: "#7fa86b"
+}, {
+  id: "agua_ele",
+  name: "Beber 3L de água",
+  icon: "💧",
+  owner: "Ele",
+  freq: "diário",
+  color: "#5b9bd5"
+}, {
+  id: "trabalho_ele",
+  name: "Trabalhar com foco, sem distrações",
+  icon: "💼",
+  owner: "Ele",
+  freq: "diário",
+  color: "#b388d6"
+}, {
+  id: "devocional_ele",
+  name: "Devocional",
+  icon: "🔥",
+  owner: "Ele",
+  freq: "diário",
+  color: "#e8b14a"
+}, {
+  id: "espiritual_ele",
+  name: "Atividade espiritual (semanal)",
+  icon: "🔥",
+  owner: "Ele",
+  freq: "1x/semana",
+  color: "#e8b14a"
+}, {
+  id: "treino_ela",
+  name: "Treinar (ou alongar, se não der)",
+  icon: "🏋️",
+  owner: "Ela",
+  freq: "diário",
+  color: "#e8743a"
+}, {
+  id: "agua_ela",
+  name: "Beber de 2,5L a 3L de água",
+  icon: "💧",
+  owner: "Ela",
+  freq: "diário",
+  color: "#5b9bd5"
+}, {
+  id: "alimentacao_ela",
+  name: "Comer bem na maior parte do dia",
+  icon: "🌱",
+  owner: "Ela",
+  freq: "diário",
+  color: "#7fa86b"
+}, {
+  id: "doces_ela",
+  name: "Reduzir doces e gorduras",
+  icon: "🌱",
+  owner: "Ela",
+  freq: "diário (cortar quase total a partir do dia 60)",
+  color: "#7fa86b"
+}, {
+  id: "sono_ela",
+  name: "Dormir antes das 23h",
+  icon: "🔥",
+  owner: "Ela",
+  freq: "dias de semana",
+  color: "#b388d6"
+}, {
+  id: "acordar_ela",
+  name: "Acordar entre 5h30 e 8h",
+  icon: "🔥",
+  owner: "Ela",
+  freq: "diário",
+  color: "#b388d6"
+}, {
+  id: "estudo_fisio_ela",
+  name: "Estudar Fisioterapia (30 min)",
+  icon: "📖",
+  owner: "Ela",
+  freq: "diário",
+  color: "#5b9bd5"
+}, {
+  id: "estudo_curso_ela",
+  name: "Estudar o curso atual (30 min)",
+  icon: "📖",
+  owner: "Ela",
+  freq: "diário",
+  color: "#5b9bd5"
+}, {
+  id: "estudo_aleatorio_ela",
+  name: "Estudar um tema aleatório (30 min)",
+  icon: "📖",
+  owner: "Ela",
+  freq: "diário",
+  color: "#5b9bd5"
+}, {
+  id: "leitura_ela",
+  name: "Ler (1h)",
+  icon: "📖",
+  owner: "Ela",
+  freq: "diário",
+  color: "#5b9bd5"
+}, {
+  id: "devocional_ela",
+  name: "Devocional",
+  icon: "🔥",
+  owner: "Ela",
+  freq: "diário",
+  color: "#e8b14a"
+}, {
+  id: "naoreclamar_ela",
+  name: "Tentar não reclamar",
+  icon: "🔥",
+  owner: "Ela",
+  freq: "diário",
+  color: "#e8b14a"
+}, {
+  id: "espiritual_ela",
+  name: "Adoração ou centro espírita",
+  icon: "🔥",
+  owner: "Ela",
+  freq: "1x/semana",
+  color: "#e8b14a"
+}, {
+  id: "planejar_dia_ela",
+  name: "Planejar o dia seguinte antes de dormir",
+  icon: "💼",
+  owner: "Ela",
+  freq: "diário",
+  color: "#d6a85a"
+}, {
+  id: "organizar_quarto_ela",
+  name: "Organizar o quarto (manutenção rápida)",
+  icon: "💼",
+  owner: "Ela",
+  freq: "diário",
+  color: "#d6a85a"
+}];
+const RECURRING_GOALS = [{
+  id: "rg_planejar_semana",
+  name: "Planejar a semana",
+  period: "weekly",
+  owner: "Ela"
+}, {
+  id: "rg_financas",
+  name: "Organizar as finanças",
+  period: "weekly",
+  owner: "Ela"
+}, {
+  id: "rg_autocuidado",
+  name: "Autocuidado",
+  period: "biweekly",
+  owner: "Ela"
+}, {
+  id: "rg_faxina",
+  name: "Faxina geral do quarto",
+  period: "biweekly",
+  owner: "Ela"
+}, {
+  id: "rg_rever_metas",
+  name: "Rever metas",
+  period: "monthly",
+  owner: "Ela"
+}, {
+  id: "rg_item_pessoal",
+  name: "Comprar 1 item pessoal",
+  period: "monthly",
+  owner: "Ela"
+}, {
+  id: "rg_marmita_ela",
+  name: "Fazer as marmitas (domingo ou segunda)",
+  period: "weekly",
+  owner: "Ela"
+}, {
+  id: "rg_marmita_ele",
+  name: "Fazer as marmitas (domingo ou segunda)",
+  period: "weekly",
+  owner: "Ele"
+}];
+const PERIOD_LABEL = {
+  weekly: "Semanal",
+  biweekly: "Quinzenal",
+  monthly: "Mensal"
+};
 function periodKeyFor(goal, refDate, startKey) {
   const d = new Date(refDate);
   if (goal.period === "weekly") {
@@ -141,37 +322,37 @@ function useCaveState() {
   const [startDate, setStartDate] = useState(DEFAULT_START);
   const [loaded, setLoaded] = useState(false);
   const [saveError, setSaveError] = useState(false);
-
   useEffect(() => {
     try {
       const localProfile = window.localStorage.getItem("mc-profile");
       if (localProfile) setProfile(localProfile);
     } catch {}
-
-    const unsubscribe = docRef.onSnapshot(
-      (snap) => {
-        if (snap.exists) {
-          const parsed = snap.data();
-          setHabits(parsed.habits && parsed.habits.length ? parsed.habits : CATALOG);
-          setLogs(parsed.logs || {});
-          setGoalLogs(parsed.goalLogs || {});
-          setReviews(parsed.reviews || {});
-          setStartDate(parsed.startDate || DEFAULT_START);
-        } else {
-          docRef.set({ habits: CATALOG, logs: {}, goalLogs: {}, reviews: {}, startDate: DEFAULT_START });
-        }
-        setLoaded(true);
-        setSaveError(false);
-      },
-      () => {
-        setLoaded(true);
-        setSaveError(true);
+    const unsubscribe = docRef.onSnapshot(snap => {
+      if (snap.exists) {
+        const parsed = snap.data();
+        setHabits(parsed.habits && parsed.habits.length ? parsed.habits : CATALOG);
+        setLogs(parsed.logs || {});
+        setGoalLogs(parsed.goalLogs || {});
+        setReviews(parsed.reviews || {});
+        setStartDate(parsed.startDate || DEFAULT_START);
+      } else {
+        docRef.set({
+          habits: CATALOG,
+          logs: {},
+          goalLogs: {},
+          reviews: {},
+          startDate: DEFAULT_START
+        });
       }
-    );
+      setLoaded(true);
+      setSaveError(false);
+    }, () => {
+      setLoaded(true);
+      setSaveError(true);
+    });
     return () => unsubscribe();
   }, []);
-
-  const persist = useCallback(async (next) => {
+  const persist = useCallback(async next => {
     try {
       await docRef.set(next);
       setSaveError(false);
@@ -179,75 +360,140 @@ function useCaveState() {
       setSaveError(true);
     }
   }, []);
-
-  const chooseProfile = useCallback((p) => {
+  const chooseProfile = useCallback(p => {
     setProfile(p);
-    try { window.localStorage.setItem("mc-profile", p); } catch {}
+    try {
+      window.localStorage.setItem("mc-profile", p);
+    } catch {}
   }, []);
-
   const toggleLog = useCallback((owner, habitId, dateKey) => {
-    setLogs((prev) => {
+    setLogs(prev => {
       const k = `${owner}:${habitId}:${dateKey}`;
-      const next = { ...prev };
-      if (next[k]) delete next[k]; else next[k] = true;
-      persist({ habits, logs: next, goalLogs, reviews, startDate });
+      const next = {
+        ...prev
+      };
+      if (next[k]) delete next[k];else next[k] = true;
+      persist({
+        habits,
+        logs: next,
+        goalLogs,
+        reviews,
+        startDate
+      });
       return next;
     });
   }, [habits, goalLogs, reviews, startDate, persist]);
-
   const toggleGoal = useCallback((owner, goalId, periodKey) => {
-    setGoalLogs((prev) => {
+    setGoalLogs(prev => {
       const k = `${owner}:${goalId}:${periodKey}`;
-      const next = { ...prev };
-      if (next[k]) delete next[k]; else next[k] = true;
-      persist({ habits, logs, goalLogs: next, reviews, startDate });
+      const next = {
+        ...prev
+      };
+      if (next[k]) delete next[k];else next[k] = true;
+      persist({
+        habits,
+        logs,
+        goalLogs: next,
+        reviews,
+        startDate
+      });
       return next;
     });
   }, [habits, logs, reviews, startDate, persist]);
-
   const addHabit = useCallback((name, owner) => {
-    setHabits((prev) => {
-      const next = [...prev, { id: `custom${Date.now()}`, name, icon: "🔥", owner, freq: "diário", color: "#e8743a" }];
-      persist({ habits: next, logs, goalLogs, reviews, startDate });
+    setHabits(prev => {
+      const next = [...prev, {
+        id: `custom${Date.now()}`,
+        name,
+        icon: "🔥",
+        owner,
+        freq: "diário",
+        color: "#e8743a"
+      }];
+      persist({
+        habits: next,
+        logs,
+        goalLogs,
+        reviews,
+        startDate
+      });
       return next;
     });
   }, [logs, goalLogs, reviews, startDate, persist]);
-
-  const removeHabit = useCallback((habitId) => {
-    setHabits((prev) => {
-      const next = prev.filter((h) => h.id !== habitId);
-      persist({ habits: next, logs, goalLogs, reviews, startDate });
+  const removeHabit = useCallback(habitId => {
+    setHabits(prev => {
+      const next = prev.filter(h => h.id !== habitId);
+      persist({
+        habits: next,
+        logs,
+        goalLogs,
+        reviews,
+        startDate
+      });
       return next;
     });
   }, [logs, goalLogs, reviews, startDate, persist]);
-
   const renameHabit = useCallback((habitId, name) => {
-    setHabits((prev) => {
-      const next = prev.map((h) => (h.id === habitId ? { ...h, name } : h));
-      persist({ habits: next, logs, goalLogs, reviews, startDate });
+    setHabits(prev => {
+      const next = prev.map(h => h.id === habitId ? {
+        ...h,
+        name
+      } : h);
+      persist({
+        habits: next,
+        logs,
+        goalLogs,
+        reviews,
+        startDate
+      });
       return next;
     });
   }, [logs, goalLogs, reviews, startDate, persist]);
-
   const saveReview = useCallback((weekKey, data) => {
-    setReviews((prev) => {
-      const next = { ...prev, [weekKey]: data };
-      persist({ habits, logs, goalLogs, reviews: next, startDate });
+    setReviews(prev => {
+      const next = {
+        ...prev,
+        [weekKey]: data
+      };
+      persist({
+        habits,
+        logs,
+        goalLogs,
+        reviews: next,
+        startDate
+      });
       return next;
     });
   }, [habits, logs, goalLogs, startDate, persist]);
-
-  const resetStart = useCallback((newStart) => {
+  const resetStart = useCallback(newStart => {
     setStartDate(newStart);
-    persist({ habits, logs, goalLogs, reviews, startDate: newStart });
+    persist({
+      habits,
+      logs,
+      goalLogs,
+      reviews,
+      startDate: newStart
+    });
   }, [habits, logs, goalLogs, reviews, persist]);
-
   return {
-    profile, chooseProfile, habits, logs, goalLogs, reviews, startDate, loaded, saveError,
-    toggleLog, toggleGoal, addHabit, removeHabit, renameHabit, saveReview, resetStart,
+    profile,
+    chooseProfile,
+    habits,
+    logs,
+    goalLogs,
+    reviews,
+    startDate,
+    loaded,
+    saveError,
+    toggleLog,
+    toggleGoal,
+    addHabit,
+    removeHabit,
+    renameHabit,
+    saveReview,
+    resetStart
   };
 }
-
 function calcStreak(owner, habitId, logs) {
   let streak = 0;
   const d = new Date();
@@ -258,7 +504,6 @@ function calcStreak(owner, habitId, logs) {
   }
   return streak;
 }
-
 function weekKeyFor(date) {
   const d = new Date(date);
   d.setDate(d.getDate() - d.getDay());
@@ -268,498 +513,1420 @@ function weekKeyFor(date) {
 // ---------- Main ----------
 function ModoCaverna() {
   const state = useCaveState();
-  const { profile, chooseProfile, habits, logs, goalLogs, loaded, saveError, toggleLog, toggleGoal, addHabit, removeHabit, renameHabit } = state;
-
+  const {
+    profile,
+    chooseProfile,
+    habits,
+    logs,
+    goalLogs,
+    loaded,
+    saveError,
+    toggleLog,
+    toggleGoal,
+    addHabit,
+    removeHabit,
+    renameHabit
+  } = state;
   const [view, setView] = useState("today");
-  const [viewMonth, setViewMonth] = useState(() => { const n = new Date(); return { y: n.getFullYear(), m: n.getMonth() }; });
+  const [viewMonth, setViewMonth] = useState(() => {
+    const n = new Date();
+    return {
+      y: n.getFullYear(),
+      m: n.getMonth()
+    };
+  });
   const [addingHabit, setAddingHabit] = useState(false);
   const [newHabitName, setNewHabitName] = useState("");
   const [editMode, setEditMode] = useState(false);
   const [renamingId, setRenamingId] = useState(null);
   const [renameValue, setRenameValue] = useState("");
-
   const tKey = todayKey();
   const today = new Date();
   const isSunday = dowIndex(today) === 0;
   const day = dayOfChallenge(state.startDate);
   const phase = phaseForDay(day);
-
   if (!loaded) {
-    return (
-      <div style={styles.page}>
-        <div style={styles.loadingWrap}><span style={{ fontSize: 28, opacity: 0.6 }}>🏔️</span></div>
-      </div>
-    );
+    return /*#__PURE__*/_jsxDEV("div", {
+      style: styles.page,
+      children: /*#__PURE__*/_jsxDEV("div", {
+        style: styles.loadingWrap,
+        children: /*#__PURE__*/_jsxDEV("span", {
+          style: {
+            fontSize: 28,
+            opacity: 0.6
+          },
+          children: "🏔️"
+        }, void 0, false)
+      }, void 0, false)
+    }, void 0, false);
   }
-
   if (!profile) {
-    return <ProfilePicker onPick={chooseProfile} />;
+    return /*#__PURE__*/_jsxDEV(ProfilePicker, {
+      onPick: chooseProfile
+    }, void 0, false);
   }
-
-  const myHabits = habits.filter((h) => h.owner === profile);
-  const myGoals = RECURRING_GOALS.filter((g) => g.owner === profile);
+  const myHabits = habits.filter(h => h.owner === profile);
+  const myGoals = RECURRING_GOALS.filter(g => g.owner === profile);
   const partnerProfile = profile === "Ela" ? "Ele" : "Ela";
-
-  const visibleToday = myHabits.filter((h) => h.domOnly ? isSunday : true);
-  const todayCompletion = visibleToday.length === 0 ? 0 :
-    Math.round((visibleToday.filter((h) => logs[`${profile}:${h.id}:${tKey}`]).length / visibleToday.length) * 100);
-
-  return (
-    <div style={styles.page}>
-      <div style={styles.shell}>
-        <header style={styles.header}>
-          <div>
-            <p style={styles.eyebrow}>Modo Caverna · Dia {Math.min(day, 90)} de 90</p>
-            <h1 style={styles.title}>
-              {view === "today" && "Hoje"}
-              {view === "stats" && "Evolução"}
-              {view === "goals" && "Metas"}
-              {view === "review" && "Revisão semanal"}
-            </h1>
-          </div>
-          <button onClick={() => chooseProfile(partnerProfile)} style={styles.profileSwitch} title={`Trocar para ${partnerProfile}`}>
-            <span style={styles.profileBadge}>{profile === "Ela" ? "♀" : "♂"}</span>{profile}
-          </button>
-        </header>
-
-        <PhaseBar day={day} phase={phase} />
-
-        <nav style={styles.tabBar}>
-          <button onClick={() => setView("today")} style={{ ...styles.tabBtn, ...(view === "today" ? styles.tabBtnActive : {}) }}>Hoje</button>
-          <button onClick={() => setView("stats")} style={{ ...styles.tabBtn, ...(view === "stats" ? styles.tabBtnActive : {}) }}>Evolução</button>
-          {myGoals.length > 0 && (
-            <button onClick={() => setView("goals")} style={{ ...styles.tabBtn, ...(view === "goals" ? styles.tabBtnActive : {}) }}>Metas</button>
-          )}
-          <button onClick={() => setView("review")} style={{ ...styles.tabBtn, ...(view === "review" ? styles.tabBtnActive : {}) }}>Revisão</button>
-        </nav>
-
-        {saveError && (
-          <div style={styles.errorBanner}>Não consegui sincronizar agora. Verifique a internet — as marcações tentam salvar de novo automaticamente.</div>
-        )}
-
-        {view === "today" && (
-          <section className="cave-fade">
-            <div style={styles.progressRow}>
-              <div style={styles.progressTrack}><div style={{ ...styles.progressFill, width: `${todayCompletion}%` }} /></div>
-              <span style={styles.progressLabel}>{todayCompletion}%</span>
-            </div>
-
-            <ul style={styles.habitList}>
-              {visibleToday.length === 0 && <li style={styles.emptyState}>Nenhum hábito para hoje. Adicione um abaixo.</li>}
-              {visibleToday.map((h) => {
-                const done = !!logs[`${profile}:${h.id}:${tKey}`];
-                return (
-                  <li key={h.id} style={styles.habitRow}>
-                    <button onClick={() => toggleLog(profile, h.id, tKey)}
-                      style={{ ...styles.checkBtn, borderColor: done ? h.color : "rgba(255,255,255,0.18)", background: done ? h.color : "transparent" }}>
-                      {done ? <span style={{ color: "#1a1410", fontWeight: 700 }}>✓</span> : <span style={{ opacity: 0.4 }}>{h.icon}</span>}
-                    </button>
-                    <div style={styles.habitTextWrap}>
-                      <span style={{ ...styles.habitName, opacity: done ? 0.5 : 1, textDecoration: done ? "line-through" : "none" }}>{h.name}</span>
-                      <span style={styles.habitFreq}>{h.freq}</span>
-                    </div>
-                    {editMode && (
-                      <div style={styles.habitActions}>
-                        <button onClick={() => { setRenamingId(h.id); setRenameValue(h.name); }} style={styles.iconBtn}>✎</button>
-                        <button onClick={() => removeHabit(h.id)} style={{ ...styles.iconBtn, color: "#d6755f" }}>✕</button>
-                      </div>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-
-            {renamingId && (
-              <div style={styles.renameRow}>
-                <input autoFocus value={renameValue} onChange={(e) => setRenameValue(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter") { renameHabit(renamingId, renameValue.trim() || "Hábito"); setRenamingId(null); } if (e.key === "Escape") setRenamingId(null); }}
-                  style={styles.input} placeholder="Novo nome do hábito" />
-                <button onClick={() => { renameHabit(renamingId, renameValue.trim() || "Hábito"); setRenamingId(null); }} style={styles.smallBtn}>Salvar</button>
-              </div>
-            )}
-
-            <div style={styles.bottomRow}>
-              {addingHabit ? (
-                <div style={styles.addHabitBox}>
-                  <input autoFocus value={newHabitName} onChange={(e) => setNewHabitName(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === "Enter" && newHabitName.trim()) { addHabit(newHabitName.trim(), profile); setNewHabitName(""); setAddingHabit(false); } if (e.key === "Escape") setAddingHabit(false); }}
-                    style={styles.input} placeholder="Nome do novo hábito" />
-                  <button onClick={() => { if (newHabitName.trim()) { addHabit(newHabitName.trim(), profile); setNewHabitName(""); setAddingHabit(false); } }} style={styles.smallBtn}>Adicionar hábito</button>
-                </div>
-              ) : (
-                <button onClick={() => setAddingHabit(true)} style={styles.ghostBtn}>+ Adicionar hábito</button>
-              )}
-              <button onClick={() => setEditMode((v) => !v)} style={{ ...styles.ghostBtn, ...(editMode ? styles.ghostBtnActive : {}) }}>
-                ✎ {editMode ? "Concluir edição" : "Editar hábitos"}
-              </button>
-            </div>
-          </section>
-        )}
-
-        {view === "stats" && (
-          <StatsView profile={profile} partnerProfile={partnerProfile} myHabits={myHabits} logs={logs} viewMonth={viewMonth} setViewMonth={setViewMonth} />
-        )}
-
-        {view === "goals" && (
-          <GoalsView profile={profile} myGoals={myGoals} goalLogs={goalLogs} toggleGoal={toggleGoal} startDate={state.startDate} />
-        )}
-
-        {view === "review" && <ReviewView state={state} />}
-      </div>
-    </div>
-  );
+  const visibleToday = myHabits.filter(h => h.domOnly ? isSunday : true);
+  const todayCompletion = visibleToday.length === 0 ? 0 : Math.round(visibleToday.filter(h => logs[`${profile}:${h.id}:${tKey}`]).length / visibleToday.length * 100);
+  return /*#__PURE__*/_jsxDEV("div", {
+    style: styles.page,
+    children: /*#__PURE__*/_jsxDEV("div", {
+      style: styles.shell,
+      children: [/*#__PURE__*/_jsxDEV("header", {
+        style: styles.header,
+        children: [/*#__PURE__*/_jsxDEV("div", {
+          children: [/*#__PURE__*/_jsxDEV("p", {
+            style: styles.eyebrow,
+            children: ["Modo Caverna · Dia ", Math.min(day, 90), " de 90"]
+          }, void 0, true), /*#__PURE__*/_jsxDEV("h1", {
+            style: styles.title,
+            children: [view === "today" && "Hoje", view === "stats" && "Evolução", view === "goals" && "Metas", view === "review" && "Revisão semanal"]
+          }, void 0, true)]
+        }, void 0, true), /*#__PURE__*/_jsxDEV("button", {
+          onClick: () => chooseProfile(partnerProfile),
+          style: styles.profileSwitch,
+          title: `Trocar para ${partnerProfile}`,
+          children: [/*#__PURE__*/_jsxDEV("span", {
+            style: styles.profileBadge,
+            children: profile === "Ela" ? "♀" : "♂"
+          }, void 0, false), profile]
+        }, void 0, true)]
+      }, void 0, true), /*#__PURE__*/_jsxDEV(PhaseBar, {
+        day: day,
+        phase: phase
+      }, void 0, false), /*#__PURE__*/_jsxDEV("nav", {
+        style: styles.tabBar,
+        children: [/*#__PURE__*/_jsxDEV("button", {
+          onClick: () => setView("today"),
+          style: {
+            ...styles.tabBtn,
+            ...(view === "today" ? styles.tabBtnActive : {})
+          },
+          children: "Hoje"
+        }, void 0, false), /*#__PURE__*/_jsxDEV("button", {
+          onClick: () => setView("stats"),
+          style: {
+            ...styles.tabBtn,
+            ...(view === "stats" ? styles.tabBtnActive : {})
+          },
+          children: "Evolução"
+        }, void 0, false), myGoals.length > 0 && /*#__PURE__*/_jsxDEV("button", {
+          onClick: () => setView("goals"),
+          style: {
+            ...styles.tabBtn,
+            ...(view === "goals" ? styles.tabBtnActive : {})
+          },
+          children: "Metas"
+        }, void 0, false), /*#__PURE__*/_jsxDEV("button", {
+          onClick: () => setView("review"),
+          style: {
+            ...styles.tabBtn,
+            ...(view === "review" ? styles.tabBtnActive : {})
+          },
+          children: "Revisão"
+        }, void 0, false)]
+      }, void 0, true), saveError && /*#__PURE__*/_jsxDEV("div", {
+        style: styles.errorBanner,
+        children: "Não consegui sincronizar agora. Verifique a internet — as marcações tentam salvar de novo automaticamente."
+      }, void 0, false), view === "today" && /*#__PURE__*/_jsxDEV("section", {
+        className: "cave-fade",
+        children: [/*#__PURE__*/_jsxDEV("div", {
+          style: styles.progressRow,
+          children: [/*#__PURE__*/_jsxDEV("div", {
+            style: styles.progressTrack,
+            children: /*#__PURE__*/_jsxDEV("div", {
+              style: {
+                ...styles.progressFill,
+                width: `${todayCompletion}%`
+              }
+            }, void 0, false)
+          }, void 0, false), /*#__PURE__*/_jsxDEV("span", {
+            style: styles.progressLabel,
+            children: [todayCompletion, "%"]
+          }, void 0, true)]
+        }, void 0, true), /*#__PURE__*/_jsxDEV("ul", {
+          style: styles.habitList,
+          children: [visibleToday.length === 0 && /*#__PURE__*/_jsxDEV("li", {
+            style: styles.emptyState,
+            children: "Nenhum hábito para hoje. Adicione um abaixo."
+          }, void 0, false), visibleToday.map(h => {
+            const done = !!logs[`${profile}:${h.id}:${tKey}`];
+            return /*#__PURE__*/_jsxDEV("li", {
+              style: styles.habitRow,
+              children: [/*#__PURE__*/_jsxDEV("button", {
+                onClick: () => toggleLog(profile, h.id, tKey),
+                style: {
+                  ...styles.checkBtn,
+                  borderColor: done ? h.color : "rgba(255,255,255,0.18)",
+                  background: done ? h.color : "transparent"
+                },
+                children: done ? /*#__PURE__*/_jsxDEV("span", {
+                  style: {
+                    color: "#1a1410",
+                    fontWeight: 700
+                  },
+                  children: "✓"
+                }, void 0, false) : /*#__PURE__*/_jsxDEV("span", {
+                  style: {
+                    opacity: 0.4
+                  },
+                  children: h.icon
+                }, void 0, false)
+              }, void 0, false), /*#__PURE__*/_jsxDEV("div", {
+                style: styles.habitTextWrap,
+                children: [/*#__PURE__*/_jsxDEV("span", {
+                  style: {
+                    ...styles.habitName,
+                    opacity: done ? 0.5 : 1,
+                    textDecoration: done ? "line-through" : "none"
+                  },
+                  children: h.name
+                }, void 0, false), /*#__PURE__*/_jsxDEV("span", {
+                  style: styles.habitFreq,
+                  children: h.freq
+                }, void 0, false)]
+              }, void 0, true), editMode && /*#__PURE__*/_jsxDEV("div", {
+                style: styles.habitActions,
+                children: [/*#__PURE__*/_jsxDEV("button", {
+                  onClick: () => {
+                    setRenamingId(h.id);
+                    setRenameValue(h.name);
+                  },
+                  style: styles.iconBtn,
+                  children: "✎"
+                }, void 0, false), /*#__PURE__*/_jsxDEV("button", {
+                  onClick: () => removeHabit(h.id),
+                  style: {
+                    ...styles.iconBtn,
+                    color: "#d6755f"
+                  },
+                  children: "✕"
+                }, void 0, false)]
+              }, void 0, true)]
+            }, h.id, true);
+          })]
+        }, void 0, true), renamingId && /*#__PURE__*/_jsxDEV("div", {
+          style: styles.renameRow,
+          children: [/*#__PURE__*/_jsxDEV("input", {
+            autoFocus: true,
+            value: renameValue,
+            onChange: e => setRenameValue(e.target.value),
+            onKeyDown: e => {
+              if (e.key === "Enter") {
+                renameHabit(renamingId, renameValue.trim() || "Hábito");
+                setRenamingId(null);
+              }
+              if (e.key === "Escape") setRenamingId(null);
+            },
+            style: styles.input,
+            placeholder: "Novo nome do hábito"
+          }, void 0, false), /*#__PURE__*/_jsxDEV("button", {
+            onClick: () => {
+              renameHabit(renamingId, renameValue.trim() || "Hábito");
+              setRenamingId(null);
+            },
+            style: styles.smallBtn,
+            children: "Salvar"
+          }, void 0, false)]
+        }, void 0, true), /*#__PURE__*/_jsxDEV("div", {
+          style: styles.bottomRow,
+          children: [addingHabit ? /*#__PURE__*/_jsxDEV("div", {
+            style: styles.addHabitBox,
+            children: [/*#__PURE__*/_jsxDEV("input", {
+              autoFocus: true,
+              value: newHabitName,
+              onChange: e => setNewHabitName(e.target.value),
+              onKeyDown: e => {
+                if (e.key === "Enter" && newHabitName.trim()) {
+                  addHabit(newHabitName.trim(), profile);
+                  setNewHabitName("");
+                  setAddingHabit(false);
+                }
+                if (e.key === "Escape") setAddingHabit(false);
+              },
+              style: styles.input,
+              placeholder: "Nome do novo hábito"
+            }, void 0, false), /*#__PURE__*/_jsxDEV("button", {
+              onClick: () => {
+                if (newHabitName.trim()) {
+                  addHabit(newHabitName.trim(), profile);
+                  setNewHabitName("");
+                  setAddingHabit(false);
+                }
+              },
+              style: styles.smallBtn,
+              children: "Adicionar hábito"
+            }, void 0, false)]
+          }, void 0, true) : /*#__PURE__*/_jsxDEV("button", {
+            onClick: () => setAddingHabit(true),
+            style: styles.ghostBtn,
+            children: "+ Adicionar hábito"
+          }, void 0, false), /*#__PURE__*/_jsxDEV("button", {
+            onClick: () => setEditMode(v => !v),
+            style: {
+              ...styles.ghostBtn,
+              ...(editMode ? styles.ghostBtnActive : {})
+            },
+            children: ["✎ ", editMode ? "Concluir edição" : "Editar hábitos"]
+          }, void 0, true)]
+        }, void 0, true)]
+      }, void 0, true), view === "stats" && /*#__PURE__*/_jsxDEV(StatsView, {
+        profile: profile,
+        partnerProfile: partnerProfile,
+        myHabits: myHabits,
+        logs: logs,
+        viewMonth: viewMonth,
+        setViewMonth: setViewMonth
+      }, void 0, false), view === "goals" && /*#__PURE__*/_jsxDEV(GoalsView, {
+        profile: profile,
+        myGoals: myGoals,
+        goalLogs: goalLogs,
+        toggleGoal: toggleGoal,
+        startDate: state.startDate
+      }, void 0, false), view === "review" && /*#__PURE__*/_jsxDEV(ReviewView, {
+        state: state
+      }, void 0, false)]
+    }, void 0, true)
+  }, void 0, false);
 }
-
-function ProfilePicker({ onPick }) {
-  return (
-    <div style={styles.page}>
-      <div style={{ ...styles.shell, display: "flex", flexDirection: "column", justifyContent: "center", minHeight: "80vh" }}>
-        <div style={{ textAlign: "center", marginBottom: 32 }}>
-          <span style={{ fontSize: 36, color: "#e8743a" }}>🏔️</span>
-          <p style={styles.eyebrow}>90 dias · Disciplina · Constância · Propósito</p>
-          <h1 style={{ ...styles.title, fontSize: 28 }}>Modo Caverna do Casal</h1>
-          <p style={{ color: "#a89c8d", fontSize: 14, marginTop: 8, maxWidth: 320, marginInline: "auto" }}>
-            Quem está entrando agora? Cada um marca os próprios hábitos neste aparelho.
-          </p>
-        </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <button onClick={() => onPick("Ela")} style={styles.profileCard}>
-            <span style={{ ...styles.profileBadgeBig, background: "rgba(91,155,213,0.18)", color: "#5b9bd5" }}>♀</span>
-            <span style={styles.profileCardLabel}>Entrar como Ela</span>
-          </button>
-          <button onClick={() => onPick("Ele")} style={styles.profileCard}>
-            <span style={{ ...styles.profileBadgeBig, background: "rgba(232,116,58,0.18)", color: "#e8743a" }}>♂</span>
-            <span style={styles.profileCardLabel}>Entrar como Ele</span>
-          </button>
-        </div>
-        <p style={{ color: "#6e6457", fontSize: 11.5, textAlign: "center", marginTop: 20, lineHeight: 1.5 }}>
-          Os dois perfis compartilham o mesmo progresso — agora de verdade, em qualquer celular.
-        </p>
-      </div>
-    </div>
-  );
+function ProfilePicker({
+  onPick
+}) {
+  return /*#__PURE__*/_jsxDEV("div", {
+    style: styles.page,
+    children: /*#__PURE__*/_jsxDEV("div", {
+      style: {
+        ...styles.shell,
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "center",
+        minHeight: "80vh"
+      },
+      children: [/*#__PURE__*/_jsxDEV("div", {
+        style: {
+          textAlign: "center",
+          marginBottom: 32
+        },
+        children: [/*#__PURE__*/_jsxDEV("span", {
+          style: {
+            fontSize: 36,
+            color: "#e8743a"
+          },
+          children: "🏔️"
+        }, void 0, false), /*#__PURE__*/_jsxDEV("p", {
+          style: styles.eyebrow,
+          children: "90 dias · Disciplina · Constância · Propósito"
+        }, void 0, false), /*#__PURE__*/_jsxDEV("h1", {
+          style: {
+            ...styles.title,
+            fontSize: 28
+          },
+          children: "Modo Caverna do Casal"
+        }, void 0, false), /*#__PURE__*/_jsxDEV("p", {
+          style: {
+            color: "#a89c8d",
+            fontSize: 14,
+            marginTop: 8,
+            maxWidth: 320,
+            marginInline: "auto"
+          },
+          children: "Quem está entrando agora? Cada um marca os próprios hábitos neste aparelho."
+        }, void 0, false)]
+      }, void 0, true), /*#__PURE__*/_jsxDEV("div", {
+        style: {
+          display: "flex",
+          flexDirection: "column",
+          gap: 12
+        },
+        children: [/*#__PURE__*/_jsxDEV("button", {
+          onClick: () => onPick("Ela"),
+          style: styles.profileCard,
+          children: [/*#__PURE__*/_jsxDEV("span", {
+            style: {
+              ...styles.profileBadgeBig,
+              background: "rgba(91,155,213,0.18)",
+              color: "#5b9bd5"
+            },
+            children: "♀"
+          }, void 0, false), /*#__PURE__*/_jsxDEV("span", {
+            style: styles.profileCardLabel,
+            children: "Entrar como Ela"
+          }, void 0, false)]
+        }, void 0, true), /*#__PURE__*/_jsxDEV("button", {
+          onClick: () => onPick("Ele"),
+          style: styles.profileCard,
+          children: [/*#__PURE__*/_jsxDEV("span", {
+            style: {
+              ...styles.profileBadgeBig,
+              background: "rgba(232,116,58,0.18)",
+              color: "#e8743a"
+            },
+            children: "♂"
+          }, void 0, false), /*#__PURE__*/_jsxDEV("span", {
+            style: styles.profileCardLabel,
+            children: "Entrar como Ele"
+          }, void 0, false)]
+        }, void 0, true)]
+      }, void 0, true), /*#__PURE__*/_jsxDEV("p", {
+        style: {
+          color: "#6e6457",
+          fontSize: 11.5,
+          textAlign: "center",
+          marginTop: 20,
+          lineHeight: 1.5
+        },
+        children: "Os dois perfis compartilham o mesmo progresso — agora de verdade, em qualquer celular."
+      }, void 0, false)]
+    }, void 0, true)
+  }, void 0, false);
 }
-
-function PhaseBar({ day, phase }) {
+function PhaseBar({
+  day,
+  phase
+}) {
   const clampedDay = Math.min(day, 90);
-  const pct = (clampedDay / 90) * 100;
-  return (
-    <div style={styles.phaseWrap}>
-      <div style={styles.phaseTrack}>
-        <div style={{ ...styles.phaseFill, width: `${pct}%` }} />
-        {[30, 60].map((mark) => <span key={mark} style={{ ...styles.phaseMark, left: `${(mark / 90) * 100}%` }} />)}
-      </div>
-      <div style={styles.phaseLabels}>
-        <span style={{ ...styles.phaseLabel, ...(phase.n === 1 ? styles.phaseLabelActive : {}) }}>Fundação</span>
-        <span style={{ ...styles.phaseLabel, ...(phase.n === 2 ? styles.phaseLabelActive : {}) }}>Consolidação</span>
-        <span style={{ ...styles.phaseLabel, ...(phase.n === 3 ? styles.phaseLabelActive : {}) }}>Autonomia</span>
-      </div>
-      <p style={styles.phaseGoal}>{phase.range} · {phase.goal}</p>
-    </div>
-  );
+  const pct = clampedDay / 90 * 100;
+  return /*#__PURE__*/_jsxDEV("div", {
+    style: styles.phaseWrap,
+    children: [/*#__PURE__*/_jsxDEV("div", {
+      style: styles.phaseTrack,
+      children: [/*#__PURE__*/_jsxDEV("div", {
+        style: {
+          ...styles.phaseFill,
+          width: `${pct}%`
+        }
+      }, void 0, false), [30, 60].map(mark => /*#__PURE__*/_jsxDEV("span", {
+        style: {
+          ...styles.phaseMark,
+          left: `${mark / 90 * 100}%`
+        }
+      }, mark, false))]
+    }, void 0, true), /*#__PURE__*/_jsxDEV("div", {
+      style: styles.phaseLabels,
+      children: [/*#__PURE__*/_jsxDEV("span", {
+        style: {
+          ...styles.phaseLabel,
+          ...(phase.n === 1 ? styles.phaseLabelActive : {})
+        },
+        children: "Fundação"
+      }, void 0, false), /*#__PURE__*/_jsxDEV("span", {
+        style: {
+          ...styles.phaseLabel,
+          ...(phase.n === 2 ? styles.phaseLabelActive : {})
+        },
+        children: "Consolidação"
+      }, void 0, false), /*#__PURE__*/_jsxDEV("span", {
+        style: {
+          ...styles.phaseLabel,
+          ...(phase.n === 3 ? styles.phaseLabelActive : {})
+        },
+        children: "Autonomia"
+      }, void 0, false)]
+    }, void 0, true), /*#__PURE__*/_jsxDEV("p", {
+      style: styles.phaseGoal,
+      children: [phase.range, " · ", phase.goal]
+    }, void 0, true)]
+  }, void 0, true);
 }
-
-function StatsView({ profile, partnerProfile, myHabits, logs, viewMonth, setViewMonth }) {
+function StatsView({
+  profile,
+  partnerProfile,
+  myHabits,
+  logs,
+  viewMonth,
+  setViewMonth
+}) {
   const tKey = todayKey();
   const monthStats = useMemo(() => {
-    const { y, m } = viewMonth;
+    const {
+      y,
+      m
+    } = viewMonth;
     const daysInMonth = new Date(y, m + 1, 0).getDate();
     const now = new Date();
-    let possible = 0, done = 0;
+    let possible = 0,
+      done = 0;
     const perDay = [];
     for (let d = 1; d <= daysInMonth; d++) {
       const dateObj = new Date(y, m, d);
       const key = toKey(dateObj);
       const isFuture = dateObj > now;
       let dayDone = 0;
-      myHabits.forEach((h) => { if (logs[`${profile}:${h.id}:${key}`]) dayDone += 1; });
-      if (!isFuture && myHabits.length > 0) { possible += myHabits.length; done += dayDone; }
-      perDay.push({ day: d, key, dayDone, isFuture, total: myHabits.length });
+      myHabits.forEach(h => {
+        if (logs[`${profile}:${h.id}:${key}`]) dayDone += 1;
+      });
+      if (!isFuture && myHabits.length > 0) {
+        possible += myHabits.length;
+        done += dayDone;
+      }
+      perDay.push({
+        day: d,
+        key,
+        dayDone,
+        isFuture,
+        total: myHabits.length
+      });
     }
-    const pct = possible > 0 ? Math.round((done / possible) * 100) : 0;
-    return { daysInMonth, perDay, pct };
+    const pct = possible > 0 ? Math.round(done / possible * 100) : 0;
+    return {
+      daysInMonth,
+      perDay,
+      pct
+    };
   }, [viewMonth, myHabits, logs, profile]);
-
-  const streaks = useMemo(() => myHabits.map((h) => ({ ...h, streak: calcStreak(profile, h.id, logs) })), [myHabits, logs, profile]);
+  const streaks = useMemo(() => myHabits.map(h => ({
+    ...h,
+    streak: calcStreak(profile, h.id, logs)
+  })), [myHabits, logs, profile]);
   const partnerCompletionToday = useMemo(() => {
     if (myHabits.length === 0) return 0;
-    const done = myHabits.filter((h) => logs[`${partnerProfile}:${h.id}:${tKey}`]).length;
-    return Math.round((done / myHabits.length) * 100);
+    const done = myHabits.filter(h => logs[`${partnerProfile}:${h.id}:${tKey}`]).length;
+    return Math.round(done / myHabits.length * 100);
   }, [myHabits, logs, partnerProfile, tKey]);
-
-  const changeMonth = (delta) => {
-    setViewMonth((prev) => {
-      let m = prev.m + delta, y = prev.y;
-      if (m < 0) { m = 11; y -= 1; } else if (m > 11) { m = 0; y += 1; }
-      return { y, m };
+  const changeMonth = delta => {
+    setViewMonth(prev => {
+      let m = prev.m + delta,
+        y = prev.y;
+      if (m < 0) {
+        m = 11;
+        y -= 1;
+      } else if (m > 11) {
+        m = 0;
+        y += 1;
+      }
+      return {
+        y,
+        m
+      };
     });
   };
-
-  return (
-    <section className="cave-fade">
-      <div style={styles.cardRow}>
-        <div style={{ ...styles.card, ...styles.cardHalf }}>
-          <p style={styles.mutedText}>Você hoje</p>
-          <span style={styles.bigStatSmall}>{Math.round((myHabits.filter(h => logs[`${profile}:${h.id}:${tKey}`]).length / (myHabits.length || 1)) * 100)}%</span>
-        </div>
-        <div style={{ ...styles.card, ...styles.cardHalf }}>
-          <p style={styles.mutedText}>{partnerProfile} hoje</p>
-          <span style={{ ...styles.bigStatSmall, color: "#a89c8d" }}>{partnerCompletionToday}%</span>
-        </div>
-      </div>
-
-      <div style={styles.card}>
-        <div style={styles.cardHeaderRow}><span>🔥</span><h2 style={styles.cardTitle}>Streak atual</h2></div>
-        {streaks.length === 0 ? <p style={styles.mutedText}>Adicione hábitos para ver sequências aqui.</p> : (
-          <ul style={styles.streakList}>
-            {streaks.slice().sort((a, b) => b.streak - a.streak).map((h) => (
-              <li key={h.id} style={styles.streakRow}>
-                <span style={{ ...styles.dot, background: h.color }} />
-                <span style={styles.streakName}>{h.name}</span>
-                <span style={styles.streakValue}>{h.streak} {h.streak === 1 ? "dia" : "dias"}</span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-
-      <div style={styles.card}>
-        <div style={styles.cardHeaderRow}><span>📈</span><h2 style={styles.cardTitle}>Conclusão do mês</h2></div>
-        <div style={styles.bigStatRow}>
-          <span style={styles.bigStat}>{monthStats.pct}%</span>
-          <span style={styles.mutedText}>dos seus hábitos realizados em {monthLabel(viewMonth.y, viewMonth.m)}</span>
-        </div>
-      </div>
-
-      <div style={styles.card}>
-        <div style={styles.calendarHeader}>
-          <div style={styles.cardHeaderRow}><span>📅</span><h2 style={styles.cardTitle}>Calendário</h2></div>
-          <div style={styles.monthNav}>
-            <button onClick={() => changeMonth(-1)} style={styles.navBtn}>‹</button>
-            <span style={styles.monthLabel}>{monthLabel(viewMonth.y, viewMonth.m)}</span>
-            <button onClick={() => changeMonth(1)} style={styles.navBtn}>›</button>
-          </div>
-        </div>
-        <CalendarGrid viewMonth={viewMonth} perDay={monthStats.perDay} habitsCount={myHabits.length} />
-        <div style={styles.legendRow}>
-          <span style={styles.mutedText}>Menos</span>
-          {[0, 0.25, 0.5, 0.75, 1].map((v) => <span key={v} style={{ ...styles.legendSwatch, ...intensityStyle(v) }} />)}
-          <span style={styles.mutedText}>Mais</span>
-        </div>
-      </div>
-    </section>
-  );
+  return /*#__PURE__*/_jsxDEV("section", {
+    className: "cave-fade",
+    children: [/*#__PURE__*/_jsxDEV("div", {
+      style: styles.cardRow,
+      children: [/*#__PURE__*/_jsxDEV("div", {
+        style: {
+          ...styles.card,
+          ...styles.cardHalf
+        },
+        children: [/*#__PURE__*/_jsxDEV("p", {
+          style: styles.mutedText,
+          children: "Você hoje"
+        }, void 0, false), /*#__PURE__*/_jsxDEV("span", {
+          style: styles.bigStatSmall,
+          children: [Math.round(myHabits.filter(h => logs[`${profile}:${h.id}:${tKey}`]).length / (myHabits.length || 1) * 100), "%"]
+        }, void 0, true)]
+      }, void 0, true), /*#__PURE__*/_jsxDEV("div", {
+        style: {
+          ...styles.card,
+          ...styles.cardHalf
+        },
+        children: [/*#__PURE__*/_jsxDEV("p", {
+          style: styles.mutedText,
+          children: [partnerProfile, " hoje"]
+        }, void 0, true), /*#__PURE__*/_jsxDEV("span", {
+          style: {
+            ...styles.bigStatSmall,
+            color: "#a89c8d"
+          },
+          children: [partnerCompletionToday, "%"]
+        }, void 0, true)]
+      }, void 0, true)]
+    }, void 0, true), /*#__PURE__*/_jsxDEV("div", {
+      style: styles.card,
+      children: [/*#__PURE__*/_jsxDEV("div", {
+        style: styles.cardHeaderRow,
+        children: [/*#__PURE__*/_jsxDEV("span", {
+          children: "🔥"
+        }, void 0, false), /*#__PURE__*/_jsxDEV("h2", {
+          style: styles.cardTitle,
+          children: "Streak atual"
+        }, void 0, false)]
+      }, void 0, true), streaks.length === 0 ? /*#__PURE__*/_jsxDEV("p", {
+        style: styles.mutedText,
+        children: "Adicione hábitos para ver sequências aqui."
+      }, void 0, false) : /*#__PURE__*/_jsxDEV("ul", {
+        style: styles.streakList,
+        children: streaks.slice().sort((a, b) => b.streak - a.streak).map(h => /*#__PURE__*/_jsxDEV("li", {
+          style: styles.streakRow,
+          children: [/*#__PURE__*/_jsxDEV("span", {
+            style: {
+              ...styles.dot,
+              background: h.color
+            }
+          }, void 0, false), /*#__PURE__*/_jsxDEV("span", {
+            style: styles.streakName,
+            children: h.name
+          }, void 0, false), /*#__PURE__*/_jsxDEV("span", {
+            style: styles.streakValue,
+            children: [h.streak, " ", h.streak === 1 ? "dia" : "dias"]
+          }, void 0, true)]
+        }, h.id, true))
+      }, void 0, false)]
+    }, void 0, true), /*#__PURE__*/_jsxDEV("div", {
+      style: styles.card,
+      children: [/*#__PURE__*/_jsxDEV("div", {
+        style: styles.cardHeaderRow,
+        children: [/*#__PURE__*/_jsxDEV("span", {
+          children: "📈"
+        }, void 0, false), /*#__PURE__*/_jsxDEV("h2", {
+          style: styles.cardTitle,
+          children: "Conclusão do mês"
+        }, void 0, false)]
+      }, void 0, true), /*#__PURE__*/_jsxDEV("div", {
+        style: styles.bigStatRow,
+        children: [/*#__PURE__*/_jsxDEV("span", {
+          style: styles.bigStat,
+          children: [monthStats.pct, "%"]
+        }, void 0, true), /*#__PURE__*/_jsxDEV("span", {
+          style: styles.mutedText,
+          children: ["dos seus hábitos realizados em ", monthLabel(viewMonth.y, viewMonth.m)]
+        }, void 0, true)]
+      }, void 0, true)]
+    }, void 0, true), /*#__PURE__*/_jsxDEV("div", {
+      style: styles.card,
+      children: [/*#__PURE__*/_jsxDEV("div", {
+        style: styles.calendarHeader,
+        children: [/*#__PURE__*/_jsxDEV("div", {
+          style: styles.cardHeaderRow,
+          children: [/*#__PURE__*/_jsxDEV("span", {
+            children: "📅"
+          }, void 0, false), /*#__PURE__*/_jsxDEV("h2", {
+            style: styles.cardTitle,
+            children: "Calendário"
+          }, void 0, false)]
+        }, void 0, true), /*#__PURE__*/_jsxDEV("div", {
+          style: styles.monthNav,
+          children: [/*#__PURE__*/_jsxDEV("button", {
+            onClick: () => changeMonth(-1),
+            style: styles.navBtn,
+            children: "‹"
+          }, void 0, false), /*#__PURE__*/_jsxDEV("span", {
+            style: styles.monthLabel,
+            children: monthLabel(viewMonth.y, viewMonth.m)
+          }, void 0, false), /*#__PURE__*/_jsxDEV("button", {
+            onClick: () => changeMonth(1),
+            style: styles.navBtn,
+            children: "›"
+          }, void 0, false)]
+        }, void 0, true)]
+      }, void 0, true), /*#__PURE__*/_jsxDEV(CalendarGrid, {
+        viewMonth: viewMonth,
+        perDay: monthStats.perDay,
+        habitsCount: myHabits.length
+      }, void 0, false), /*#__PURE__*/_jsxDEV("div", {
+        style: styles.legendRow,
+        children: [/*#__PURE__*/_jsxDEV("span", {
+          style: styles.mutedText,
+          children: "Menos"
+        }, void 0, false), [0, 0.25, 0.5, 0.75, 1].map(v => /*#__PURE__*/_jsxDEV("span", {
+          style: {
+            ...styles.legendSwatch,
+            ...intensityStyle(v)
+          }
+        }, v, false)), /*#__PURE__*/_jsxDEV("span", {
+          style: styles.mutedText,
+          children: "Mais"
+        }, void 0, false)]
+      }, void 0, true)]
+    }, void 0, true)]
+  }, void 0, true);
 }
-
-function CalendarGrid({ viewMonth, perDay, habitsCount }) {
-  const { y, m } = viewMonth;
+function CalendarGrid({
+  viewMonth,
+  perDay,
+  habitsCount
+}) {
+  const {
+    y,
+    m
+  } = viewMonth;
   const firstDow = new Date(y, m, 1).getDay();
   const weeks = [];
   let week = new Array(firstDow).fill(null);
-  perDay.forEach((d) => { week.push(d); if (week.length === 7) { weeks.push(week); week = []; } });
-  if (week.length) { while (week.length < 7) week.push(null); weeks.push(week); }
+  perDay.forEach(d => {
+    week.push(d);
+    if (week.length === 7) {
+      weeks.push(week);
+      week = [];
+    }
+  });
+  if (week.length) {
+    while (week.length < 7) week.push(null);
+    weeks.push(week);
+  }
   const dowLabels = ["D", "S", "T", "Q", "Q", "S", "S"];
-  return (
-    <div>
-      <div style={styles.dowRow}>{dowLabels.map((d, i) => <span key={i} style={styles.dowLabel}>{d}</span>)}</div>
-      {weeks.map((w, wi) => (
-        <div key={wi} style={styles.calWeekRow}>
-          {w.map((d, di) => d ? (
-            <div key={di} title={habitsCount > 0 ? `${d.day}: ${d.dayDone}/${d.total} hábitos` : `${d.day}`}
-              style={{ ...styles.calCell, ...(d.isFuture ? styles.calCellFuture : intensityStyle(habitsCount > 0 ? d.dayDone / habitsCount : 0)) }}>
-              <span style={styles.calDayNum}>{d.day}</span>
-            </div>
-          ) : <div key={di} style={{ ...styles.calCell, visibility: "hidden" }} />)}
-        </div>
-      ))}
-    </div>
-  );
+  return /*#__PURE__*/_jsxDEV("div", {
+    children: [/*#__PURE__*/_jsxDEV("div", {
+      style: styles.dowRow,
+      children: dowLabels.map((d, i) => /*#__PURE__*/_jsxDEV("span", {
+        style: styles.dowLabel,
+        children: d
+      }, i, false))
+    }, void 0, false), weeks.map((w, wi) => /*#__PURE__*/_jsxDEV("div", {
+      style: styles.calWeekRow,
+      children: w.map((d, di) => d ? /*#__PURE__*/_jsxDEV("div", {
+        title: habitsCount > 0 ? `${d.day}: ${d.dayDone}/${d.total} hábitos` : `${d.day}`,
+        style: {
+          ...styles.calCell,
+          ...(d.isFuture ? styles.calCellFuture : intensityStyle(habitsCount > 0 ? d.dayDone / habitsCount : 0))
+        },
+        children: /*#__PURE__*/_jsxDEV("span", {
+          style: styles.calDayNum,
+          children: d.day
+        }, void 0, false)
+      }, di, false) : /*#__PURE__*/_jsxDEV("div", {
+        style: {
+          ...styles.calCell,
+          visibility: "hidden"
+        }
+      }, di, false))
+    }, wi, false))]
+  }, void 0, true);
 }
-
 function intensityStyle(ratio) {
-  if (ratio <= 0) return { background: "rgba(255,255,255,0.05)" };
-  if (ratio < 0.34) return { background: "rgba(232,116,58,0.28)" };
-  if (ratio < 0.67) return { background: "rgba(232,116,58,0.55)" };
-  if (ratio < 1) return { background: "rgba(232,116,58,0.8)" };
-  return { background: "#e8743a" };
+  if (ratio <= 0) return {
+    background: "rgba(255,255,255,0.05)"
+  };
+  if (ratio < 0.34) return {
+    background: "rgba(232,116,58,0.28)"
+  };
+  if (ratio < 0.67) return {
+    background: "rgba(232,116,58,0.55)"
+  };
+  if (ratio < 1) return {
+    background: "rgba(232,116,58,0.8)"
+  };
+  return {
+    background: "#e8743a"
+  };
 }
-
-function GoalsView({ profile, myGoals, goalLogs, toggleGoal, startDate }) {
+function GoalsView({
+  profile,
+  myGoals,
+  goalLogs,
+  toggleGoal,
+  startDate
+}) {
   const now = new Date();
-  const grouped = { weekly: [], biweekly: [], monthly: [] };
-  myGoals.forEach((g) => grouped[g.period].push(g));
-
-  return (
-    <section className="cave-fade">
-      <p style={{ ...styles.mutedText, marginBottom: 16 }}>Essas metas reaparecem automaticamente a cada ciclo — marque conforme for cumprindo.</p>
-      {["weekly", "biweekly", "monthly"].map((period) =>
-        grouped[period].length === 0 ? null : (
-          <div key={period} style={styles.card}>
-            <div style={styles.cardHeaderRow}><span>📅</span><h2 style={styles.cardTitle}>{PERIOD_LABEL[period]}</h2></div>
-            <ul style={styles.habitList}>
-              {grouped[period].map((g) => {
-                const pKey = periodKeyFor(g, now, startDate);
-                const done = !!goalLogs[`${profile}:${g.id}:${pKey}`];
-                return (
-                  <li key={g.id} style={styles.habitRow}>
-                    <button onClick={() => toggleGoal(profile, g.id, pKey)}
-                      style={{ ...styles.checkBtn, borderColor: done ? "#e8743a" : "rgba(255,255,255,0.18)", background: done ? "#e8743a" : "transparent" }}>
-                      {done && <span style={{ color: "#1a1410", fontWeight: 700 }}>✓</span>}
-                    </button>
-                    <span style={{ ...styles.habitName, flex: 1, opacity: done ? 0.5 : 1, textDecoration: done ? "line-through" : "none" }}>{g.name}</span>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        )
-      )}
-    </section>
-  );
+  const grouped = {
+    weekly: [],
+    biweekly: [],
+    monthly: []
+  };
+  myGoals.forEach(g => grouped[g.period].push(g));
+  return /*#__PURE__*/_jsxDEV("section", {
+    className: "cave-fade",
+    children: [/*#__PURE__*/_jsxDEV("p", {
+      style: {
+        ...styles.mutedText,
+        marginBottom: 16
+      },
+      children: "Essas metas reaparecem automaticamente a cada ciclo — marque conforme for cumprindo."
+    }, void 0, false), ["weekly", "biweekly", "monthly"].map(period => grouped[period].length === 0 ? null : /*#__PURE__*/_jsxDEV("div", {
+      style: styles.card,
+      children: [/*#__PURE__*/_jsxDEV("div", {
+        style: styles.cardHeaderRow,
+        children: [/*#__PURE__*/_jsxDEV("span", {
+          children: "📅"
+        }, void 0, false), /*#__PURE__*/_jsxDEV("h2", {
+          style: styles.cardTitle,
+          children: PERIOD_LABEL[period]
+        }, void 0, false)]
+      }, void 0, true), /*#__PURE__*/_jsxDEV("ul", {
+        style: styles.habitList,
+        children: grouped[period].map(g => {
+          const pKey = periodKeyFor(g, now, startDate);
+          const done = !!goalLogs[`${profile}:${g.id}:${pKey}`];
+          return /*#__PURE__*/_jsxDEV("li", {
+            style: styles.habitRow,
+            children: [/*#__PURE__*/_jsxDEV("button", {
+              onClick: () => toggleGoal(profile, g.id, pKey),
+              style: {
+                ...styles.checkBtn,
+                borderColor: done ? "#e8743a" : "rgba(255,255,255,0.18)",
+                background: done ? "#e8743a" : "transparent"
+              },
+              children: done && /*#__PURE__*/_jsxDEV("span", {
+                style: {
+                  color: "#1a1410",
+                  fontWeight: 700
+                },
+                children: "✓"
+              }, void 0, false)
+            }, void 0, false), /*#__PURE__*/_jsxDEV("span", {
+              style: {
+                ...styles.habitName,
+                flex: 1,
+                opacity: done ? 0.5 : 1,
+                textDecoration: done ? "line-through" : "none"
+              },
+              children: g.name
+            }, void 0, false)]
+          }, g.id, true);
+        })
+      }, void 0, false)]
+    }, period, true))]
+  }, void 0, true);
 }
-
-function ReviewView({ state }) {
-  const { reviews, saveReview } = state;
+function ReviewView({
+  state
+}) {
+  const {
+    reviews,
+    saveReview
+  } = state;
   const [weekOffset, setWeekOffset] = useState(0);
   const targetDate = new Date();
   targetDate.setDate(targetDate.getDate() + weekOffset * 7);
   const wKey = weekKeyFor(targetDate);
-
-  const [form, setForm] = useState(reviews[wKey] || { fail1: "", fail2: "", improve: "", learn: "", adjust: "", goals: "" });
-  useEffect(() => { setForm(reviews[wKey] || { fail1: "", fail2: "", improve: "", learn: "", adjust: "", goals: "" }); }, [wKey, reviews]);
-
+  const [form, setForm] = useState(reviews[wKey] || {
+    fail1: "",
+    fail2: "",
+    improve: "",
+    learn: "",
+    adjust: "",
+    goals: ""
+  });
+  useEffect(() => {
+    setForm(reviews[wKey] || {
+      fail1: "",
+      fail2: "",
+      improve: "",
+      learn: "",
+      adjust: "",
+      goals: ""
+    });
+  }, [wKey, reviews]);
   const sundayDate = new Date(wKey + "T00:00:00");
-  const label = sundayDate.toLocaleDateString("pt-BR", { day: "2-digit", month: "long" });
+  const label = sundayDate.toLocaleDateString("pt-BR", {
+    day: "2-digit",
+    month: "long"
+  });
   const handleSave = () => saveReview(wKey, form);
-  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
-
-  return (
-    <section className="cave-fade">
-      <div style={styles.weekNavRow}>
-        <button onClick={() => setWeekOffset((w) => w - 1)} style={styles.navBtn}>‹</button>
-        <span style={styles.monthLabel}>Semana de {label}</span>
-        <button onClick={() => setWeekOffset((w) => w + 1)} style={styles.navBtn} disabled={weekOffset >= 0}>›</button>
-      </div>
-
-      <div style={styles.card}>
-        <div style={styles.cardHeaderRow}><span>❤️</span><h2 style={styles.cardTitle}>Sentem juntos e respondam</h2></div>
-        <p style={styles.mutedText}>Façam isso todo domingo, os dois lado a lado.</p>
-        <Field label="Onde você acha que eu falhei essa semana?" value={form.fail1} onChange={set("fail1")} />
-        <Field label="O que você acha que eu posso melhorar?" value={form.fail2} onChange={set("fail2")} />
-        <Field label="Onde eu posso melhorar?" value={form.improve} onChange={set("improve")} />
-      </div>
-
-      <div style={styles.card}>
-        <div style={styles.cardHeaderRow}><span>📖</span><h2 style={styles.cardTitle}>Registro da semana</h2></div>
-        <Field label="Aprendizados da semana" value={form.learn} onChange={set("learn")} />
-        <Field label="Ajustes necessários" value={form.adjust} onChange={set("adjust")} />
-        <Field label="Metas da próxima semana" value={form.goals} onChange={set("goals")} />
-      </div>
-
-      <button onClick={handleSave} style={{ ...styles.smallBtn, width: "100%", padding: "12px 0", fontSize: 14 }}>Salvar revisão da semana</button>
-
-      {Object.keys(reviews).length > 0 && (
-        <div style={{ marginTop: 24 }}>
-          <p style={styles.eyebrow}>Revisões anteriores</p>
-          {Object.keys(reviews).sort().reverse().slice(0, 6).map((k) => {
-            const d = new Date(k + "T00:00:00");
-            return <div key={k} style={styles.pastReviewRow}><span>📅</span><span>{d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}</span></div>;
-          })}
-        </div>
-      )}
-    </section>
-  );
+  const set = k => e => setForm(f => ({
+    ...f,
+    [k]: e.target.value
+  }));
+  return /*#__PURE__*/_jsxDEV("section", {
+    className: "cave-fade",
+    children: [/*#__PURE__*/_jsxDEV("div", {
+      style: styles.weekNavRow,
+      children: [/*#__PURE__*/_jsxDEV("button", {
+        onClick: () => setWeekOffset(w => w - 1),
+        style: styles.navBtn,
+        children: "‹"
+      }, void 0, false), /*#__PURE__*/_jsxDEV("span", {
+        style: styles.monthLabel,
+        children: ["Semana de ", label]
+      }, void 0, true), /*#__PURE__*/_jsxDEV("button", {
+        onClick: () => setWeekOffset(w => w + 1),
+        style: styles.navBtn,
+        disabled: weekOffset >= 0,
+        children: "›"
+      }, void 0, false)]
+    }, void 0, true), /*#__PURE__*/_jsxDEV("div", {
+      style: styles.card,
+      children: [/*#__PURE__*/_jsxDEV("div", {
+        style: styles.cardHeaderRow,
+        children: [/*#__PURE__*/_jsxDEV("span", {
+          children: "❤️"
+        }, void 0, false), /*#__PURE__*/_jsxDEV("h2", {
+          style: styles.cardTitle,
+          children: "Sentem juntos e respondam"
+        }, void 0, false)]
+      }, void 0, true), /*#__PURE__*/_jsxDEV("p", {
+        style: styles.mutedText,
+        children: "Façam isso todo domingo, os dois lado a lado."
+      }, void 0, false), /*#__PURE__*/_jsxDEV(Field, {
+        label: "Onde você acha que eu falhei essa semana?",
+        value: form.fail1,
+        onChange: set("fail1")
+      }, void 0, false), /*#__PURE__*/_jsxDEV(Field, {
+        label: "O que você acha que eu posso melhorar?",
+        value: form.fail2,
+        onChange: set("fail2")
+      }, void 0, false), /*#__PURE__*/_jsxDEV(Field, {
+        label: "Onde eu posso melhorar?",
+        value: form.improve,
+        onChange: set("improve")
+      }, void 0, false)]
+    }, void 0, true), /*#__PURE__*/_jsxDEV("div", {
+      style: styles.card,
+      children: [/*#__PURE__*/_jsxDEV("div", {
+        style: styles.cardHeaderRow,
+        children: [/*#__PURE__*/_jsxDEV("span", {
+          children: "📖"
+        }, void 0, false), /*#__PURE__*/_jsxDEV("h2", {
+          style: styles.cardTitle,
+          children: "Registro da semana"
+        }, void 0, false)]
+      }, void 0, true), /*#__PURE__*/_jsxDEV(Field, {
+        label: "Aprendizados da semana",
+        value: form.learn,
+        onChange: set("learn")
+      }, void 0, false), /*#__PURE__*/_jsxDEV(Field, {
+        label: "Ajustes necessários",
+        value: form.adjust,
+        onChange: set("adjust")
+      }, void 0, false), /*#__PURE__*/_jsxDEV(Field, {
+        label: "Metas da próxima semana",
+        value: form.goals,
+        onChange: set("goals")
+      }, void 0, false)]
+    }, void 0, true), /*#__PURE__*/_jsxDEV("button", {
+      onClick: handleSave,
+      style: {
+        ...styles.smallBtn,
+        width: "100%",
+        padding: "12px 0",
+        fontSize: 14
+      },
+      children: "Salvar revisão da semana"
+    }, void 0, false), Object.keys(reviews).length > 0 && /*#__PURE__*/_jsxDEV("div", {
+      style: {
+        marginTop: 24
+      },
+      children: [/*#__PURE__*/_jsxDEV("p", {
+        style: styles.eyebrow,
+        children: "Revisões anteriores"
+      }, void 0, false), Object.keys(reviews).sort().reverse().slice(0, 6).map(k => {
+        const d = new Date(k + "T00:00:00");
+        return /*#__PURE__*/_jsxDEV("div", {
+          style: styles.pastReviewRow,
+          children: [/*#__PURE__*/_jsxDEV("span", {
+            children: "📅"
+          }, void 0, false), /*#__PURE__*/_jsxDEV("span", {
+            children: d.toLocaleDateString("pt-BR", {
+              day: "2-digit",
+              month: "short"
+            })
+          }, void 0, false)]
+        }, k, true);
+      })]
+    }, void 0, true)]
+  }, void 0, true);
 }
-
-function Field({ label, value, onChange }) {
-  return (
-    <div style={{ marginBottom: 12 }}>
-      <label style={styles.fieldLabel}>{label}</label>
-      <textarea value={value} onChange={onChange} style={styles.textarea} rows={2} placeholder="Escreva aqui..." />
-    </div>
-  );
+function Field({
+  label,
+  value,
+  onChange
+}) {
+  return /*#__PURE__*/_jsxDEV("div", {
+    style: {
+      marginBottom: 12
+    },
+    children: [/*#__PURE__*/_jsxDEV("label", {
+      style: styles.fieldLabel,
+      children: label
+    }, void 0, false), /*#__PURE__*/_jsxDEV("textarea", {
+      value: value,
+      onChange: onChange,
+      style: styles.textarea,
+      rows: 2,
+      placeholder: "Escreva aqui..."
+    }, void 0, false)]
+  }, void 0, true);
 }
-
 const FONT_DISPLAY = "'Fraunces', Georgia, serif";
 const FONT_BODY = "'Inter', system-ui, sans-serif";
-
 const styles = {
-  page: { minHeight: "100vh", background: "#1a1410", color: "#f2ede4", fontFamily: FONT_BODY, padding: "24px 16px 64px" },
-  loadingWrap: { display: "flex", alignItems: "center", justifyContent: "center", height: "60vh" },
-  shell: { maxWidth: 480, margin: "0 auto" },
-  header: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16, gap: 12 },
-  eyebrow: { margin: 0, fontSize: 10.5, letterSpacing: "0.1em", textTransform: "uppercase", color: "#a89c8d", fontWeight: 600 },
-  title: { margin: "4px 0 0", fontFamily: FONT_DISPLAY, fontWeight: 600, fontSize: 30, letterSpacing: "-0.01em" },
-  profileSwitch: { display: "flex", alignItems: "center", gap: 6, border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.04)", color: "#f2ede4", fontSize: 12.5, fontWeight: 600, padding: "6px 10px 6px 6px", borderRadius: 999, marginTop: 4 },
-  profileBadge: { width: 20, height: 20, borderRadius: "50%", background: "rgba(232,116,58,0.18)", color: "#e8743a", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12 },
-  phaseWrap: { marginBottom: 18 },
-  phaseTrack: { position: "relative", height: 6, borderRadius: 999, background: "rgba(255,255,255,0.07)", marginBottom: 8 },
-  phaseFill: { height: "100%", borderRadius: 999, background: "linear-gradient(90deg, #8a5a3a, #e8743a)", transition: "width 0.4s ease" },
-  phaseMark: { position: "absolute", top: -3, width: 2, height: 12, background: "rgba(255,255,255,0.25)" },
-  phaseLabels: { display: "flex", justifyContent: "space-between", fontSize: 10.5, color: "#6e6457", fontWeight: 600 },
-  phaseLabelActive: { color: "#e8743a" },
-  phaseGoal: { fontSize: 11.5, color: "#a89c8d", marginTop: 6, marginBottom: 0 },
-  tabBar: { display: "flex", background: "rgba(255,255,255,0.05)", borderRadius: 10, padding: 3, gap: 2, marginBottom: 20 },
-  tabBtn: { flex: 1, border: "none", background: "transparent", color: "#a89c8d", fontSize: 12.5, fontWeight: 600, padding: "8px 10px", borderRadius: 8 },
-  tabBtnActive: { background: "#e8743a", color: "#1a1410" },
-  errorBanner: { background: "rgba(214,117,95,0.15)", border: "1px solid rgba(214,117,95,0.4)", color: "#e8a799", fontSize: 13, padding: "10px 14px", borderRadius: 10, marginBottom: 16 },
-  progressRow: { display: "flex", alignItems: "center", gap: 12, marginBottom: 20 },
-  progressTrack: { flex: 1, height: 8, borderRadius: 999, background: "rgba(255,255,255,0.07)", overflow: "hidden" },
-  progressFill: { height: "100%", background: "linear-gradient(90deg, #8a5a3a, #e8743a)", borderRadius: 999, transition: "width 0.4s ease" },
-  progressLabel: { fontFamily: FONT_DISPLAY, fontSize: 18, fontWeight: 600, minWidth: 44, textAlign: "right" },
-  habitList: { listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 10 },
-  emptyState: { color: "#a89c8d", fontSize: 14, padding: "24px 4px", textAlign: "center", border: "1px dashed rgba(255,255,255,0.12)", borderRadius: 12 },
-  habitRow: { display: "flex", alignItems: "center", gap: 12, background: "rgba(255,255,255,0.035)", padding: "12px 14px", borderRadius: 12 },
-  checkBtn: { width: 30, height: 30, borderRadius: 8, border: "2px solid", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 },
-  habitTextWrap: { display: "flex", flexDirection: "column", flex: 1, gap: 2 },
-  habitName: { fontSize: 14.5, fontWeight: 500 },
-  habitFreq: { fontSize: 11, color: "#6e6457" },
-  habitActions: { display: "flex", gap: 4 },
-  iconBtn: { width: 26, height: 26, borderRadius: 6, border: "none", background: "transparent", color: "#a89c8d", display: "flex", alignItems: "center", justifyContent: "center" },
-  renameRow: { display: "flex", gap: 8, marginTop: 12 },
-  addHabitBox: { display: "flex", flexDirection: "column", gap: 8, marginTop: 4, flex: 1 },
-  input: { flex: 1, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.14)", borderRadius: 9, padding: "10px 12px", color: "#f2ede4", fontSize: 14 },
-  smallBtn: { border: "none", background: "#e8743a", color: "#1a1410", fontWeight: 700, fontSize: 13, padding: "10px 16px", borderRadius: 9 },
-  bottomRow: { display: "flex", gap: 8, marginTop: 16, flexWrap: "wrap" },
-  ghostBtn: { display: "flex", alignItems: "center", gap: 6, border: "1px dashed rgba(255,255,255,0.18)", background: "transparent", color: "#c9c0b1", fontSize: 13, fontWeight: 600, padding: "9px 14px", borderRadius: 10 },
-  ghostBtnActive: { borderColor: "#e8743a", color: "#e8743a" },
-  cardRow: { display: "flex", gap: 10, marginBottom: 14 },
-  cardHalf: { flex: 1, marginBottom: 0 },
-  card: { background: "rgba(255,255,255,0.035)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 16, padding: 18, marginBottom: 14 },
-  cardHeaderRow: { display: "flex", alignItems: "center", gap: 8, marginBottom: 12 },
-  cardTitle: { margin: 0, fontFamily: FONT_DISPLAY, fontSize: 16.5, fontWeight: 600 },
-  mutedText: { color: "#a89c8d", fontSize: 12.5, margin: 0 },
-  bigStatSmall: { fontFamily: FONT_DISPLAY, fontSize: 30, fontWeight: 600, color: "#e8743a" },
-  streakList: { listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 8 },
-  streakRow: { display: "flex", alignItems: "center", gap: 10 },
-  dot: { width: 8, height: 8, borderRadius: "50%", flexShrink: 0 },
-  streakName: { fontSize: 13.5, flex: 1 },
-  streakValue: { fontFamily: FONT_DISPLAY, fontWeight: 600, fontSize: 14, color: "#e8743a" },
-  bigStatRow: { display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap" },
-  bigStat: { fontFamily: FONT_DISPLAY, fontSize: 42, fontWeight: 600, color: "#7fa86b", lineHeight: 1 },
-  calendarHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, flexWrap: "wrap", gap: 8 },
-  monthNav: { display: "flex", alignItems: "center", gap: 8 },
-  weekNavRow: { display: "flex", alignItems: "center", justifyContent: "center", gap: 12, marginBottom: 16 },
-  navBtn: { width: 26, height: 26, borderRadius: 7, border: "1px solid rgba(255,255,255,0.12)", background: "transparent", color: "#f2ede4", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 },
-  monthLabel: { fontSize: 13, fontWeight: 600, textTransform: "capitalize", minWidth: 110, textAlign: "center" },
-  dowRow: { display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4, marginBottom: 4 },
-  dowLabel: { fontSize: 10, color: "#a89c8d", textAlign: "center", fontWeight: 600 },
-  calWeekRow: { display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4, marginBottom: 4 },
-  calCell: { aspectRatio: "1", borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", position: "relative" },
-  calCellFuture: { background: "transparent", border: "1px dashed rgba(255,255,255,0.08)" },
-  calDayNum: { fontSize: 9, color: "rgba(255,255,255,0.4)" },
-  legendRow: { display: "flex", alignItems: "center", gap: 4, marginTop: 12, justifyContent: "flex-end" },
-  legendSwatch: { width: 10, height: 10, borderRadius: 3 },
-  fieldLabel: { display: "block", fontSize: 12.5, color: "#c9c0b1", marginBottom: 6, fontWeight: 500 },
-  textarea: { width: "100%", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.14)", borderRadius: 9, padding: "10px 12px", color: "#f2ede4", fontSize: 13.5, resize: "vertical", lineHeight: 1.4 },
-  pastReviewRow: { display: "flex", alignItems: "center", gap: 8, fontSize: 12.5, color: "#a89c8d", padding: "6px 0" },
-  profileCard: { display: "flex", alignItems: "center", gap: 14, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.035)", borderRadius: 16, padding: "16px 18px", color: "#f2ede4" },
-  profileBadgeBig: { width: 40, height: 40, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 },
-  profileCardLabel: { fontSize: 15, fontWeight: 600, fontFamily: FONT_DISPLAY },
+  page: {
+    minHeight: "100vh",
+    background: "#1a1410",
+    color: "#f2ede4",
+    fontFamily: FONT_BODY,
+    padding: "24px 16px 64px"
+  },
+  loadingWrap: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    height: "60vh"
+  },
+  shell: {
+    maxWidth: 480,
+    margin: "0 auto"
+  },
+  header: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 16,
+    gap: 12
+  },
+  eyebrow: {
+    margin: 0,
+    fontSize: 10.5,
+    letterSpacing: "0.1em",
+    textTransform: "uppercase",
+    color: "#a89c8d",
+    fontWeight: 600
+  },
+  title: {
+    margin: "4px 0 0",
+    fontFamily: FONT_DISPLAY,
+    fontWeight: 600,
+    fontSize: 30,
+    letterSpacing: "-0.01em"
+  },
+  profileSwitch: {
+    display: "flex",
+    alignItems: "center",
+    gap: 6,
+    border: "1px solid rgba(255,255,255,0.12)",
+    background: "rgba(255,255,255,0.04)",
+    color: "#f2ede4",
+    fontSize: 12.5,
+    fontWeight: 600,
+    padding: "6px 10px 6px 6px",
+    borderRadius: 999,
+    marginTop: 4
+  },
+  profileBadge: {
+    width: 20,
+    height: 20,
+    borderRadius: "50%",
+    background: "rgba(232,116,58,0.18)",
+    color: "#e8743a",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: 12
+  },
+  phaseWrap: {
+    marginBottom: 18
+  },
+  phaseTrack: {
+    position: "relative",
+    height: 6,
+    borderRadius: 999,
+    background: "rgba(255,255,255,0.07)",
+    marginBottom: 8
+  },
+  phaseFill: {
+    height: "100%",
+    borderRadius: 999,
+    background: "linear-gradient(90deg, #8a5a3a, #e8743a)",
+    transition: "width 0.4s ease"
+  },
+  phaseMark: {
+    position: "absolute",
+    top: -3,
+    width: 2,
+    height: 12,
+    background: "rgba(255,255,255,0.25)"
+  },
+  phaseLabels: {
+    display: "flex",
+    justifyContent: "space-between",
+    fontSize: 10.5,
+    color: "#6e6457",
+    fontWeight: 600
+  },
+  phaseLabelActive: {
+    color: "#e8743a"
+  },
+  phaseGoal: {
+    fontSize: 11.5,
+    color: "#a89c8d",
+    marginTop: 6,
+    marginBottom: 0
+  },
+  tabBar: {
+    display: "flex",
+    background: "rgba(255,255,255,0.05)",
+    borderRadius: 10,
+    padding: 3,
+    gap: 2,
+    marginBottom: 20
+  },
+  tabBtn: {
+    flex: 1,
+    border: "none",
+    background: "transparent",
+    color: "#a89c8d",
+    fontSize: 12.5,
+    fontWeight: 600,
+    padding: "8px 10px",
+    borderRadius: 8
+  },
+  tabBtnActive: {
+    background: "#e8743a",
+    color: "#1a1410"
+  },
+  errorBanner: {
+    background: "rgba(214,117,95,0.15)",
+    border: "1px solid rgba(214,117,95,0.4)",
+    color: "#e8a799",
+    fontSize: 13,
+    padding: "10px 14px",
+    borderRadius: 10,
+    marginBottom: 16
+  },
+  progressRow: {
+    display: "flex",
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 20
+  },
+  progressTrack: {
+    flex: 1,
+    height: 8,
+    borderRadius: 999,
+    background: "rgba(255,255,255,0.07)",
+    overflow: "hidden"
+  },
+  progressFill: {
+    height: "100%",
+    background: "linear-gradient(90deg, #8a5a3a, #e8743a)",
+    borderRadius: 999,
+    transition: "width 0.4s ease"
+  },
+  progressLabel: {
+    fontFamily: FONT_DISPLAY,
+    fontSize: 18,
+    fontWeight: 600,
+    minWidth: 44,
+    textAlign: "right"
+  },
+  habitList: {
+    listStyle: "none",
+    margin: 0,
+    padding: 0,
+    display: "flex",
+    flexDirection: "column",
+    gap: 10
+  },
+  emptyState: {
+    color: "#a89c8d",
+    fontSize: 14,
+    padding: "24px 4px",
+    textAlign: "center",
+    border: "1px dashed rgba(255,255,255,0.12)",
+    borderRadius: 12
+  },
+  habitRow: {
+    display: "flex",
+    alignItems: "center",
+    gap: 12,
+    background: "rgba(255,255,255,0.035)",
+    padding: "12px 14px",
+    borderRadius: 12
+  },
+  checkBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 8,
+    border: "2px solid",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0
+  },
+  habitTextWrap: {
+    display: "flex",
+    flexDirection: "column",
+    flex: 1,
+    gap: 2
+  },
+  habitName: {
+    fontSize: 14.5,
+    fontWeight: 500
+  },
+  habitFreq: {
+    fontSize: 11,
+    color: "#6e6457"
+  },
+  habitActions: {
+    display: "flex",
+    gap: 4
+  },
+  iconBtn: {
+    width: 26,
+    height: 26,
+    borderRadius: 6,
+    border: "none",
+    background: "transparent",
+    color: "#a89c8d",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  renameRow: {
+    display: "flex",
+    gap: 8,
+    marginTop: 12
+  },
+  addHabitBox: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 8,
+    marginTop: 4,
+    flex: 1
+  },
+  input: {
+    flex: 1,
+    background: "rgba(255,255,255,0.06)",
+    border: "1px solid rgba(255,255,255,0.14)",
+    borderRadius: 9,
+    padding: "10px 12px",
+    color: "#f2ede4",
+    fontSize: 14
+  },
+  smallBtn: {
+    border: "none",
+    background: "#e8743a",
+    color: "#1a1410",
+    fontWeight: 700,
+    fontSize: 13,
+    padding: "10px 16px",
+    borderRadius: 9
+  },
+  bottomRow: {
+    display: "flex",
+    gap: 8,
+    marginTop: 16,
+    flexWrap: "wrap"
+  },
+  ghostBtn: {
+    display: "flex",
+    alignItems: "center",
+    gap: 6,
+    border: "1px dashed rgba(255,255,255,0.18)",
+    background: "transparent",
+    color: "#c9c0b1",
+    fontSize: 13,
+    fontWeight: 600,
+    padding: "9px 14px",
+    borderRadius: 10
+  },
+  ghostBtnActive: {
+    borderColor: "#e8743a",
+    color: "#e8743a"
+  },
+  cardRow: {
+    display: "flex",
+    gap: 10,
+    marginBottom: 14
+  },
+  cardHalf: {
+    flex: 1,
+    marginBottom: 0
+  },
+  card: {
+    background: "rgba(255,255,255,0.035)",
+    border: "1px solid rgba(255,255,255,0.06)",
+    borderRadius: 16,
+    padding: 18,
+    marginBottom: 14
+  },
+  cardHeaderRow: {
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 12
+  },
+  cardTitle: {
+    margin: 0,
+    fontFamily: FONT_DISPLAY,
+    fontSize: 16.5,
+    fontWeight: 600
+  },
+  mutedText: {
+    color: "#a89c8d",
+    fontSize: 12.5,
+    margin: 0
+  },
+  bigStatSmall: {
+    fontFamily: FONT_DISPLAY,
+    fontSize: 30,
+    fontWeight: 600,
+    color: "#e8743a"
+  },
+  streakList: {
+    listStyle: "none",
+    margin: 0,
+    padding: 0,
+    display: "flex",
+    flexDirection: "column",
+    gap: 8
+  },
+  streakRow: {
+    display: "flex",
+    alignItems: "center",
+    gap: 10
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: "50%",
+    flexShrink: 0
+  },
+  streakName: {
+    fontSize: 13.5,
+    flex: 1
+  },
+  streakValue: {
+    fontFamily: FONT_DISPLAY,
+    fontWeight: 600,
+    fontSize: 14,
+    color: "#e8743a"
+  },
+  bigStatRow: {
+    display: "flex",
+    alignItems: "baseline",
+    gap: 10,
+    flexWrap: "wrap"
+  },
+  bigStat: {
+    fontFamily: FONT_DISPLAY,
+    fontSize: 42,
+    fontWeight: 600,
+    color: "#7fa86b",
+    lineHeight: 1
+  },
+  calendarHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+    flexWrap: "wrap",
+    gap: 8
+  },
+  monthNav: {
+    display: "flex",
+    alignItems: "center",
+    gap: 8
+  },
+  weekNavRow: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 12,
+    marginBottom: 16
+  },
+  navBtn: {
+    width: 26,
+    height: 26,
+    borderRadius: 7,
+    border: "1px solid rgba(255,255,255,0.12)",
+    background: "transparent",
+    color: "#f2ede4",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: 16
+  },
+  monthLabel: {
+    fontSize: 13,
+    fontWeight: 600,
+    textTransform: "capitalize",
+    minWidth: 110,
+    textAlign: "center"
+  },
+  dowRow: {
+    display: "grid",
+    gridTemplateColumns: "repeat(7, 1fr)",
+    gap: 4,
+    marginBottom: 4
+  },
+  dowLabel: {
+    fontSize: 10,
+    color: "#a89c8d",
+    textAlign: "center",
+    fontWeight: 600
+  },
+  calWeekRow: {
+    display: "grid",
+    gridTemplateColumns: "repeat(7, 1fr)",
+    gap: 4,
+    marginBottom: 4
+  },
+  calCell: {
+    aspectRatio: "1",
+    borderRadius: 6,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    position: "relative"
+  },
+  calCellFuture: {
+    background: "transparent",
+    border: "1px dashed rgba(255,255,255,0.08)"
+  },
+  calDayNum: {
+    fontSize: 9,
+    color: "rgba(255,255,255,0.4)"
+  },
+  legendRow: {
+    display: "flex",
+    alignItems: "center",
+    gap: 4,
+    marginTop: 12,
+    justifyContent: "flex-end"
+  },
+  legendSwatch: {
+    width: 10,
+    height: 10,
+    borderRadius: 3
+  },
+  fieldLabel: {
+    display: "block",
+    fontSize: 12.5,
+    color: "#c9c0b1",
+    marginBottom: 6,
+    fontWeight: 500
+  },
+  textarea: {
+    width: "100%",
+    background: "rgba(255,255,255,0.06)",
+    border: "1px solid rgba(255,255,255,0.14)",
+    borderRadius: 9,
+    padding: "10px 12px",
+    color: "#f2ede4",
+    fontSize: 13.5,
+    resize: "vertical",
+    lineHeight: 1.4
+  },
+  pastReviewRow: {
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    fontSize: 12.5,
+    color: "#a89c8d",
+    padding: "6px 0"
+  },
+  profileCard: {
+    display: "flex",
+    alignItems: "center",
+    gap: 14,
+    border: "1px solid rgba(255,255,255,0.1)",
+    background: "rgba(255,255,255,0.035)",
+    borderRadius: 16,
+    padding: "16px 18px",
+    color: "#f2ede4"
+  },
+  profileBadgeBig: {
+    width: 40,
+    height: 40,
+    borderRadius: "50%",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: 18,
+    flexShrink: 0
+  },
+  profileCardLabel: {
+    fontSize: 15,
+    fontWeight: 600,
+    fontFamily: FONT_DISPLAY
+  }
 };
-
 const root = ReactDOM.createRoot(document.getElementById("root"));
-root.render(<ModoCaverna />);
+root.render(/*#__PURE__*/_jsxDEV(ModoCaverna, {}, void 0, false));
 </script>
 </body>
 </html>
