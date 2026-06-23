@@ -629,6 +629,7 @@ function useCaveState() {
   const [logs, setLogs] = useState({});
   const [goalLogs, setGoalLogs] = useState({});
   const [reviews, setReviews] = useState({});
+  const [weights, setWeights] = useState({});
   const [startDate, setStartDate] = useState(DEFAULT_START);
   const [loaded, setLoaded] = useState(false);
   const [saveError, setSaveError] = useState(false);
@@ -644,6 +645,7 @@ function useCaveState() {
         setLogs(parsed.logs || {});
         setGoalLogs(parsed.goalLogs || {});
         setReviews(parsed.reviews || {});
+        setWeights(parsed.weights || {});
         setStartDate(parsed.startDate || DEFAULT_START);
       } else {
         docRef.set({
@@ -651,6 +653,7 @@ function useCaveState() {
           logs: {},
           goalLogs: {},
           reviews: {},
+          weights: {},
           startDate: DEFAULT_START
         });
       }
@@ -688,11 +691,12 @@ function useCaveState() {
         logs: next,
         goalLogs,
         reviews,
+        weights,
         startDate
       });
       return next;
     });
-  }, [habits, goalLogs, reviews, startDate, persist]);
+  }, [habits, goalLogs, reviews, weights, startDate, persist]);
   const toggleGoal = useCallback((owner, goalId, periodKey) => {
     setGoalLogs(prev => {
       const k = `${owner}:${goalId}:${periodKey}`;
@@ -705,11 +709,12 @@ function useCaveState() {
         logs,
         goalLogs: next,
         reviews,
+        weights,
         startDate
       });
       return next;
     });
-  }, [habits, logs, reviews, startDate, persist]);
+  }, [habits, logs, reviews, weights, startDate, persist]);
   const addHabit = useCallback((name, owner) => {
     setHabits(prev => {
       const next = [...prev, {
@@ -725,11 +730,12 @@ function useCaveState() {
         logs,
         goalLogs,
         reviews,
+        weights,
         startDate
       });
       return next;
     });
-  }, [logs, goalLogs, reviews, startDate, persist]);
+  }, [logs, goalLogs, reviews, weights, startDate, persist]);
   const removeHabit = useCallback(habitId => {
     setHabits(prev => {
       const next = prev.filter(h => h.id !== habitId);
@@ -738,11 +744,12 @@ function useCaveState() {
         logs,
         goalLogs,
         reviews,
+        weights,
         startDate
       });
       return next;
     });
-  }, [logs, goalLogs, reviews, startDate, persist]);
+  }, [logs, goalLogs, reviews, weights, startDate, persist]);
   const renameHabit = useCallback((habitId, name) => {
     setHabits(prev => {
       const next = prev.map(h => h.id === habitId ? {
@@ -754,11 +761,12 @@ function useCaveState() {
         logs,
         goalLogs,
         reviews,
+        weights,
         startDate
       });
       return next;
     });
-  }, [logs, goalLogs, reviews, startDate, persist]);
+  }, [logs, goalLogs, reviews, weights, startDate, persist]);
   const saveReview = useCallback((weekKey, data) => {
     setReviews(prev => {
       const next = {
@@ -770,11 +778,30 @@ function useCaveState() {
         logs,
         goalLogs,
         reviews: next,
+        weights,
         startDate
       });
       return next;
     });
-  }, [habits, logs, goalLogs, startDate, persist]);
+  }, [habits, logs, goalLogs, weights, startDate, persist]);
+  const saveWeight = useCallback((owner, weekKey, value) => {
+    setWeights(prev => {
+      const k = `${owner}:${weekKey}`;
+      const next = {
+        ...prev
+      };
+      if (value === null) delete next[k];else next[k] = value;
+      persist({
+        habits,
+        logs,
+        goalLogs,
+        reviews,
+        weights: next,
+        startDate
+      });
+      return next;
+    });
+  }, [habits, logs, goalLogs, reviews, startDate, persist]);
   const resetStart = useCallback(newStart => {
     setStartDate(newStart);
     persist({
@@ -782,9 +809,10 @@ function useCaveState() {
       logs,
       goalLogs,
       reviews,
+      weights,
       startDate: newStart
     });
-  }, [habits, logs, goalLogs, reviews, persist]);
+  }, [habits, logs, goalLogs, reviews, weights, persist]);
   return {
     profile,
     chooseProfile,
@@ -792,6 +820,7 @@ function useCaveState() {
     logs,
     goalLogs,
     reviews,
+    weights,
     startDate,
     loaded,
     saveError,
@@ -801,6 +830,7 @@ function useCaveState() {
     removeHabit,
     renameHabit,
     saveReview,
+    saveWeight,
     resetStart
   };
 }
@@ -1050,7 +1080,9 @@ function ModoCaverna() {
     myHabits: myHabits,
     logs: logs,
     viewMonth: viewMonth,
-    setViewMonth: setViewMonth
+    setViewMonth: setViewMonth,
+    weights: state.weights,
+    saveWeight: state.saveWeight
   }), view === "goals" && /*#__PURE__*/React.createElement(GoalsView, {
     profile: profile,
     myGoals: myGoals,
@@ -1185,7 +1217,9 @@ function StatsView({
   myHabits,
   logs,
   viewMonth,
-  setViewMonth
+  setViewMonth,
+  weights,
+  saveWeight
 }) {
   const tKey = todayKey();
   const monthStats = useMemo(() => {
@@ -1276,7 +1310,12 @@ function StatsView({
       ...styles.bigStatSmall,
       color: "#a89c8d"
     }
-  }, partnerCompletionToday, "%"))), /*#__PURE__*/React.createElement("div", {
+  }, partnerCompletionToday, "%"))), /*#__PURE__*/React.createElement(WeightCard, {
+    profile: profile,
+    partnerProfile: partnerProfile,
+    weights: weights,
+    saveWeight: saveWeight
+  }), /*#__PURE__*/React.createElement("div", {
     style: styles.card
   }, /*#__PURE__*/React.createElement("div", {
     style: styles.cardHeaderRow
@@ -1345,6 +1384,100 @@ function StatsView({
   })), /*#__PURE__*/React.createElement("span", {
     style: styles.mutedText
   }, "Mais"))));
+}
+function WeightCard({
+  profile,
+  partnerProfile,
+  weights,
+  saveWeight
+}) {
+  const now = new Date();
+  const wKey = weekKeyFor(now);
+  const myKey = `${profile}:${wKey}`;
+  const partnerKey = `${partnerProfile}:${wKey}`;
+  const [draft, setDraft] = useState(weights[myKey] != null ? String(weights[myKey]) : "");
+  useEffect(() => {
+    setDraft(weights[myKey] != null ? String(weights[myKey]) : "");
+  }, [myKey, weights]);
+  const myEntries = useMemo(() => {
+    return Object.keys(weights).filter(k => k.startsWith(`${profile}:`)).map(k => ({
+      weekKey: k.split(":")[1],
+      value: weights[k]
+    })).sort((a, b) => a.weekKey < b.weekKey ? 1 : -1).slice(0, 8);
+  }, [weights, profile]);
+  const lastValue = myEntries.find(e => e.weekKey !== wKey)?.value;
+  const currentValue = weights[myKey];
+  const delta = currentValue != null && lastValue != null ? +(currentValue - lastValue).toFixed(1) : null;
+  const handleSave = () => {
+    const num = parseFloat(draft.replace(",", "."));
+    if (!isNaN(num) && num > 0) saveWeight(profile, wKey, num);
+  };
+  const weekLabel = new Date(wKey + "T00:00:00").toLocaleDateString("pt-BR", {
+    day: "2-digit",
+    month: "short"
+  });
+  return /*#__PURE__*/React.createElement("div", {
+    style: styles.card
+  }, /*#__PURE__*/React.createElement("div", {
+    style: styles.cardHeaderRow
+  }, /*#__PURE__*/React.createElement("span", null, "⚖️"), /*#__PURE__*/React.createElement("h2", {
+    style: styles.cardTitle
+  }, "Peso da semana")), /*#__PURE__*/React.createElement("p", {
+    style: styles.mutedText
+  }, "Semana de ", weekLabel, " · registre uma vez por semana"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 8,
+      marginTop: 12,
+      alignItems: "center"
+    }
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "number",
+    inputMode: "decimal",
+    step: "0.1",
+    value: draft,
+    onChange: e => setDraft(e.target.value),
+    onKeyDown: e => {
+      if (e.key === "Enter") handleSave();
+    },
+    style: {
+      ...styles.input,
+      maxWidth: 110
+    },
+    placeholder: "kg"
+  }), /*#__PURE__*/React.createElement("button", {
+    onClick: handleSave,
+    style: styles.smallBtn
+  }, "Salvar peso"), delta != null && /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 13,
+      fontWeight: 600,
+      color: delta <= 0 ? "#7fa86b" : "#d6755f"
+    }
+  }, delta > 0 ? "+" : "", delta, " kg")), weights[partnerKey] != null && /*#__PURE__*/React.createElement("p", {
+    style: {
+      ...styles.mutedText,
+      marginTop: 10
+    }
+  }, partnerProfile, " essa semana: ", weights[partnerKey], " kg"), myEntries.length > 0 && /*#__PURE__*/React.createElement("ul", {
+    style: {
+      ...styles.streakList,
+      marginTop: 14
+    }
+  }, myEntries.map(e => {
+    const label = new Date(e.weekKey + "T00:00:00").toLocaleDateString("pt-BR", {
+      day: "2-digit",
+      month: "short"
+    });
+    return /*#__PURE__*/React.createElement("li", {
+      key: e.weekKey,
+      style: styles.streakRow
+    }, /*#__PURE__*/React.createElement("span", {
+      style: styles.streakName
+    }, label), /*#__PURE__*/React.createElement("span", {
+      style: styles.streakValue
+    }, e.value, " kg"));
+  })));
 }
 function CalendarGrid({
   viewMonth,
